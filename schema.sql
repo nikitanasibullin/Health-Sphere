@@ -50,7 +50,7 @@ patient_id INTEGER REFERENCES Patient(id),
 schedule_id INTEGER REFERENCES Schedule(id),
 service_id INTEGER REFERENCES Service(id),
 status VARCHAR(50),
-information VARCHAR(500)
+information TEXT
 );
 
 CREATE TABLE Contradiction(
