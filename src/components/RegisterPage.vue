@@ -16,7 +16,7 @@
         <h1 class="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
           Create Account
         </h1>
-        <p class="text-gray-600 mt-2">Join MediCare Plus Today</p>
+        <p class="text-gray-600 mt-2">Join HealthSphere Today</p>
       </div>
       
       <!-- Form -->
@@ -156,13 +156,12 @@
       <!-- Login Link -->
       <div class="mt-6 text-center">
         <p class="text-gray-600 text-sm">Already have an account?</p>
-        <button 
-          @click="goToLogin" 
-          type="button"
-          class="text-cyan-600 hover:text-cyan-800 font-semibold mt-2 transition duration-200"
+        <router-link 
+          to="/login" 
+          class="text-cyan-600 hover:text-cyan-800 font-semibold mt-2 inline-block transition duration-200"
         >
           Sign In <i class="fas fa-arrow-right ml-1"></i>
-        </button>
+        </router-link>
       </div>
       
       <!-- Error Message -->
