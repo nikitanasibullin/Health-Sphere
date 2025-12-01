@@ -6,27 +6,27 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-user-md text-green-500 mr-2"></i>Manage Doctors
         </h2>
-        <button 
-          @click="showAddModal = true" 
+        <button
+          @click="showAddModal = true"
           class="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-teal-700 shadow-lg transition"
         >
           <i class="fas fa-plus mr-2"></i>Add Doctor
         </button>
       </div>
-      
+
       <!-- Search -->
       <div class="mb-6">
         <div class="relative">
           <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="search" 
-            type="text" 
+          <input
+            v-model="search"
+            type="text"
             placeholder="Search doctors by name or specialization..."
             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           >
         </div>
       </div>
-      
+
       <!-- Table -->
       <div class="overflow-x-auto">
         <table class="min-w-full">
@@ -77,10 +77,10 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Add/Edit Modal -->
-    <div 
-      v-if="showAddModal || showEditModal" 
+    <div
+      v-if="showAddModal || showEditModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="closeModals"
     >
@@ -93,14 +93,14 @@
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
-        
+
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
-              <input 
-                v-model="form.name" 
-                type="text" 
+              <input
+                v-model="form.name"
+                type="text"
                 required
                 placeholder="Dr. Full Name"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -108,9 +108,9 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-              <input 
-                v-model="form.email" 
-                type="email" 
+              <input
+                v-model="form.email"
+                type="email"
                 required
                 placeholder="doctor@hospital.com"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -118,9 +118,9 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Phone</label>
-              <input 
-                v-model="form.phone" 
-                type="tel" 
+              <input
+                v-model="form.phone"
+                type="tel"
                 required
                 placeholder="Phone number"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -128,8 +128,8 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Specialization</label>
-              <select 
-                v-model="form.specialization" 
+              <select
+                v-model="form.specialization"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
@@ -143,16 +143,16 @@
               </select>
             </div>
           </div>
-          
+
           <div class="flex gap-4 mt-6">
-            <button 
+            <button
               type="button"
               @click="closeModals"
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition"
             >
@@ -167,51 +167,51 @@
 
 <script>
 import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useHospitalData } from '../../composables/useHospitalData.js'
 
 export default {
   name: 'AdminDoctors',
   setup() {
     const { doctors, addDoctor, updateDoctor, deleteDoctor, addActivity } = useHospitalData()
-    
+
     const search = ref('')
     const showAddModal = ref(false)
     const showEditModal = ref(false)
     const editingId = ref(null)
-    
+
     const form = ref({
       name: '',
       email: '',
       phone: '',
       specialization: ''
     })
-    
+
     const filteredDoctors = computed(() => {
       if (!search.value) return doctors.value
       const searchLower = search.value.toLowerCase()
-      return doctors.value.filter(d => 
+      return doctors.value.filter(d =>
         d.name.toLowerCase().includes(searchLower) ||
         d.specialization.toLowerCase().includes(searchLower)
       )
     })
-    
+
     const resetForm = () => {
       form.value = { name: '', email: '', phone: '', specialization: '' }
       editingId.value = null
     }
-    
+
     const closeModals = () => {
       showAddModal.value = false
       showEditModal.value = false
       resetForm()
     }
-    
+
     const editDoctor = (doctor) => {
       form.value = { ...doctor }
       editingId.value = doctor.id
       showEditModal.value = true
     }
-    
+
     const handleSubmit = () => {
       if (showEditModal.value && editingId.value) {
         updateDoctor(editingId.value, { ...form.value })
@@ -222,7 +222,7 @@ export default {
       }
       closeModals()
     }
-    
+
     const handleDelete = (id) => {
       if (confirm('Are you sure you want to delete this doctor?')) {
         const doctor = doctors.value.find(d => d.id === id)
@@ -230,7 +230,7 @@ export default {
         addActivity(`Doctor ${doctor?.name} removed`, 'fas fa-trash', 'bg-red-500')
       }
     }
-    
+
     return {
       search,
       showAddModal,

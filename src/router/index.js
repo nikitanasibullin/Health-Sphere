@@ -2,31 +2,43 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginPage from '../components/LoginPage.vue'
 import RegisterPage from '../components/RegisterPage.vue'
 import AdminPage from '../components/AdminPage.vue'
-//import DoctorPage from '../components/DoctorPage.vue'
-//import PatientPage from '../components/PatientPage.vue'
+import DoctorPage from '../components/DoctorPage.vue'
+import PatientPage from '../components/PatientPage.vue'
 
 const routes = [
-  { 
-    path: '/', 
-    redirect: '/login' 
+  {
+    path: '/',
+    redirect: '/login'
   },
-  { 
-    path: '/login', 
+  {
+    path: '/login',
     name: 'Login',
     component: LoginPage,
     meta: { requiresGuest: true }  // Only for non-logged users
   },
-  { 
-    path: '/register', 
+  {
+    path: '/register',
     name: 'Register',
     component: RegisterPage,
     meta: { requiresGuest: true }
   },
-  { 
-    path: '/admin', 
+  {
+    path: '/admin',
     name: 'Admin',
     component: AdminPage,
     meta: { requiresAuth: true, role: 'admin' }  // Requires admin login
+  },
+  {
+    path: '/doctor',
+    name: 'Doctor',
+    component: DoctorPage,
+    meta: { requiresAuth: true, role: 'doctor' }
+  },
+  {
+    path: '/patient',
+    name: 'Patient',
+    component: PatientPage,
+    meta: { requiresAuth: true, role: 'patient' }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -44,7 +56,7 @@ router.beforeEach((to, from, next) => {
   // Get user from localStorage
   const userJson = localStorage.getItem('currentUser')
   const currentUser = userJson ? JSON.parse(userJson) : null
-  
+
   // Route requires authentication
   if (to.meta.requiresAuth) {
     if (!currentUser) {

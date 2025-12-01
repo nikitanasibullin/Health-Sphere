@@ -14,9 +14,9 @@
             <p class="text-xs text-gray-500">Advanced Hospital Management</p>
           </div>
         </div>
-        
+
         <div class="flex items-center space-x-4">
-          
+
           <!-- User Profile -->
           <div class="flex items-center space-x-3 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-lg">
             <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -27,10 +27,10 @@
               <p class="text-xs text-gray-500 capitalize">{{ userRole }}</p>
             </div>
           </div>
-          
+
           <!-- Logout Button -->
-          <button 
-            @click="$emit('logout')" 
+          <button
+            @click="$emit('logout')"
             class="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-pink-600 transition shadow-md"
           >
             <i class="fas fa-sign-out-alt mr-2"></i>Logout
@@ -42,7 +42,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 
 export default {
   name: 'AppHeader',
@@ -54,19 +54,19 @@ export default {
   },
   emits: ['logout', 'notification-click', 'clear-notifications'],
   setup(props) {
-    
+
     // Safe computed properties with null checks
     const userName = computed(() => {
       return props.user?.name || 'User'
     })
-    
+
     const userRole = computed(() => {
       return props.user?.role || 'guest'
     })
-    
+
     const userIcon = computed(() => {
       if (!props.user?.role) return 'fas fa-user'
-      
+
       const icons = {
         admin: 'fas fa-user-shield',
         doctor: 'fas fa-user-md',
@@ -74,7 +74,7 @@ export default {
       }
       return icons[props.user.role] || 'fas fa-user'
     })
-    
+
     return {
       userName,
       userRole,

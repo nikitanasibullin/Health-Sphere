@@ -6,14 +6,14 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>Manage Appointments
         </h2>
-        <button 
-          @click="showAddModal = true" 
+        <button
+          @click="showAddModal = true"
           class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 shadow-lg transition"
         >
           <i class="fas fa-plus mr-2"></i>Add Appointment
         </button>
       </div>
-      
+
       <!-- Table -->
       <div class="overflow-x-auto">
         <table class="min-w-full">
@@ -51,10 +51,10 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Add Modal -->
-    <div 
-      v-if="showAddModal" 
+    <div
+      v-if="showAddModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="showAddModal = false"
     >
@@ -65,13 +65,13 @@
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
-        
+
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Patient</label>
-              <select 
-                v-model="form.patientId" 
+              <select
+                v-model="form.patientId"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -83,8 +83,8 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Doctor</label>
-              <select 
-                v-model="form.doctorId" 
+              <select
+                v-model="form.doctorId"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
@@ -96,33 +96,33 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Date</label>
-              <input 
-                v-model="form.date" 
-                type="date" 
+              <input
+                v-model="form.date"
+                type="date"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Time</label>
-              <input 
-                v-model="form.time" 
-                type="time" 
+              <input
+                v-model="form.time"
+                type="time"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
             </div>
           </div>
-          
+
           <div class="flex gap-4 mt-6">
-            <button 
+            <button
               type="button"
               @click="showAddModal = false"
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               class="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition"
             >
@@ -137,23 +137,23 @@
 
 <script>
 import { ref } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useHospitalData } from '../../composables/useHospitalData.js'
 
 export default {
   name: 'AdminAppointments',
   setup() {
-    const { 
-      patients, 
-      doctors, 
-      appointments, 
-      getPatientName, 
+    const {
+      patients,
+      doctors,
+      appointments,
+      getPatientName,
       getDoctorName,
       addAppointment,
       updateAppointmentStatus,
       deleteAppointment,
       addActivity
     } = useHospitalData()
-    
+
     const showAddModal = ref(false)
     const form = ref({
       patientId: '',
@@ -161,7 +161,7 @@ export default {
       date: '',
       time: ''
     })
-    
+
     const getStatusClass = (status) => {
       const classes = {
         'Scheduled': 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold',
@@ -170,14 +170,14 @@ export default {
       }
       return classes[status] || classes['Scheduled']
     }
-    
+
     const cycleStatus = (apt) => {
       const statuses = ['Scheduled', 'Completed', 'Cancelled']
       const currentIndex = statuses.indexOf(apt.status)
       const nextStatus = statuses[(currentIndex + 1) % statuses.length]
       updateAppointmentStatus(apt.id, nextStatus)
     }
-    
+
     const handleSubmit = () => {
       addAppointment({
         patientId: parseInt(form.value.patientId),
@@ -189,14 +189,14 @@ export default {
       showAddModal.value = false
       form.value = { patientId: '', doctorId: '', date: '', time: '' }
     }
-    
+
     const handleDelete = (id) => {
       if (confirm('Are you sure you want to delete this appointment?')) {
         deleteAppointment(id)
         addActivity('Appointment cancelled', 'fas fa-calendar-times', 'bg-red-500')
       }
     }
-    
+
     return {
       patients,
       doctors,

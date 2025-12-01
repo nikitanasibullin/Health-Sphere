@@ -6,14 +6,14 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-file-invoice-dollar text-green-500 mr-2"></i>Billing & Invoices
         </h2>
-        <button 
-          @click="showAddModal = true" 
+        <button
+          @click="showAddModal = true"
           class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-lg transition"
         >
           <i class="fas fa-plus mr-2"></i>Create Invoice
         </button>
       </div>
-      
+
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="bg-green-50 p-4 rounded-lg">
@@ -29,7 +29,7 @@
           <p class="text-2xl font-bold text-blue-700">${{ monthlyRevenue.toLocaleString() }}</p>
         </div>
       </div>
-      
+
       <!-- Table -->
       <div class="overflow-x-auto">
         <table class="min-w-full">
@@ -51,8 +51,8 @@
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ bill.service }}</td>
               <td class="px-6 py-4 whitespace-nowrap font-bold text-green-600">${{ bill.amount }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span :class="bill.status === 'Paid' 
-                  ? 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold' 
+                <span :class="bill.status === 'Paid'
+                  ? 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold'
                   : 'px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold'">
                   {{ bill.status }}
                 </span>
@@ -62,9 +62,9 @@
                 <button @click="printInvoice(bill)" class="text-blue-600 hover:text-blue-800 mr-3" title="Print">
                   <i class="fas fa-print"></i>
                 </button>
-                <button 
+                <button
                   v-if="bill.status !== 'Paid'"
-                  @click="handleMarkPaid(bill.id)" 
+                  @click="handleMarkPaid(bill.id)"
                   class="text-green-600 hover:text-green-800"
                   title="Mark as Paid"
                 >
@@ -76,10 +76,10 @@
         </table>
       </div>
     </div>
-    
+
     <!-- Add Invoice Modal -->
-    <div 
-      v-if="showAddModal" 
+    <div
+      v-if="showAddModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="showAddModal = false"
     >
@@ -90,13 +90,13 @@
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
-        
+
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Patient</label>
-              <select 
-                v-model="form.patientId" 
+              <select
+                v-model="form.patientId"
                 required
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
@@ -108,9 +108,9 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Service</label>
-              <input 
-                v-model="form.service" 
-                type="text" 
+              <input
+                v-model="form.service"
+                type="text"
                 required
                 placeholder="e.g., General Checkup"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -118,9 +118,9 @@
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Amount ($)</label>
-              <input 
-                v-model="form.amount" 
-                type="number" 
+              <input
+                v-model="form.amount"
+                type="number"
                 required
                 min="0"
                 placeholder="0.00"
@@ -128,16 +128,16 @@
               >
             </div>
           </div>
-          
+
           <div class="flex gap-4 mt-6">
-            <button 
+            <button
               type="button"
               @click="showAddModal = false"
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition"
             >
@@ -152,14 +152,14 @@
 
 <script>
 import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useHospitalData } from '../../composables/useHospitalData.js'
 
 export default {
   name: 'AdminBilling',
   setup() {
-    const { 
-      patients, 
-      billings, 
+    const {
+      patients,
+      billings,
       totalRevenue,
       monthlyRevenue,
       getPatientName,
@@ -167,29 +167,29 @@ export default {
       markBillingPaid,
       addActivity
     } = useHospitalData()
-    
+
     const showAddModal = ref(false)
     const form = ref({
       patientId: '',
       service: '',
       amount: ''
     })
-    
+
     const pendingAmount = computed(() => {
       return billings.value
         .filter(b => b.status === 'Pending')
         .reduce((sum, b) => sum + b.amount, 0)
     })
-    
+
     const printInvoice = (bill) => {
       alert(`Printing invoice #${bill.id} for ${getPatientName(bill.patientId)}`)
     }
-    
+
     const handleMarkPaid = (id) => {
       markBillingPaid(id)
       addActivity('Payment received', 'fas fa-dollar-sign', 'bg-green-500')
     }
-    
+
     const handleSubmit = () => {
       addBilling({
         patientId: parseInt(form.value.patientId),
@@ -201,7 +201,7 @@ export default {
       showAddModal.value = false
       form.value = { patientId: '', service: '', amount: '' }
     }
-    
+
     return {
       patients,
       billings,

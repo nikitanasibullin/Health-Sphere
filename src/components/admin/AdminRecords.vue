@@ -4,11 +4,11 @@
       <h2 class="text-3xl font-bold text-gray-800 mb-6">
         <i class="fas fa-file-medical text-blue-500 mr-2"></i>Medical Records
       </h2>
-      
+
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div 
-          v-for="record in medicalRecords" 
-          :key="record.id" 
+        <div
+          v-for="record in medicalRecords"
+          :key="record.id"
           class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition card-hover"
         >
           <div class="flex items-center justify-between mb-4">
@@ -27,7 +27,7 @@
           </p>
           <p class="text-gray-700 bg-gray-50 p-3 rounded-lg">{{ record.diagnosis }}</p>
         </div>
-        
+
         <div v-if="medicalRecords.length === 0" class="col-span-full text-center py-12 text-gray-500">
           <i class="fas fa-file-medical text-4xl mb-4"></i>
           <p>No medical records found</p>
@@ -38,13 +38,13 @@
 </template>
 
 <script>
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useHospitalData } from '../../composables/useHospitalData.js'
 
 export default {
   name: 'AdminRecords',
   setup() {
     const { medicalRecords, getPatientName, getDoctorName } = useHospitalData()
-    
+
     return {
       medicalRecords,
       getPatientName,
