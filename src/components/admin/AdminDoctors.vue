@@ -126,6 +126,18 @@
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
             </div>
+
+            <div v-if="showAddModal">
+              <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+              <input
+                v-model="form.password"
+                type="password"
+                required
+                placeholder="Pasword"
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+            </div>
+
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Specialization</label>
               <select
@@ -142,6 +154,7 @@
                 <option value="General Practice">General Practice</option>
               </select>
             </div>
+
           </div>
 
           <div class="flex gap-4 mt-6">
@@ -183,6 +196,7 @@ export default {
       name: '',
       email: '',
       phone: '',
+      password: '',
       specialization: ''
     })
 
