@@ -34,11 +34,11 @@ class Patient(Base):
             name='check_first_name_format'
         ),
         CheckConstraint(
-            "last_name ~ '^[a-z][a-z]+$'",
+            "last_name ~ '^[A-Z][a-z]+$'",
             name='check_last_name_format'
         ),
         CheckConstraint(
-            "patronymic ~ '^[a-z][a-z]+$'",
+            "patronymic ~ '^[A-Z][a-z]+$'",
             name='check_patronymic_format'
         ),
         CheckConstraint(
@@ -83,11 +83,8 @@ class Doctor(Base):
     password=Column(String,nullable=False)
     specialization_id = Column(Integer, ForeignKey('specialization.id'), nullable=False)
 
-    specialization = relationship("Specialization", back_populates="doctor_list")
+    specialization = relationship("Specialization", back_populates="doctors")
     schedules = relationship("Schedule", back_populates="doctor")
-
-
-    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
 
     __table_args__ = (
         CheckConstraint(
@@ -95,11 +92,11 @@ class Doctor(Base):
             name='check_first_name_format'
         ),
         CheckConstraint(
-            "last_name ~ '^[a-z][a-z]+$'",
+            "last_name ~ '^[A-Z][a-z]+$'",
             name='check_last_name_format'
         ),
         CheckConstraint(
-            "patronymic ~ '^[a-z][a-z]+$'",
+            "patronymic ~ '^[A-Z][a-z]+$'",
             name='check_patronymic_format'
         ),
         CheckConstraint(
@@ -109,8 +106,11 @@ class Doctor(Base):
         CheckConstraint(
             "email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'",
             name='check_email_format'
-        ),
+        )
     )
+
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
+
 
 
 class Service(Base):
@@ -147,6 +147,8 @@ class Schedule(Base):
         CheckConstraint("end_time > start_time", name='check_valid_time_range'),
         CheckConstraint("date >= CURRENT_DATE", name='check_future_date'),
     )
+
+    appointment = relationship("Appointment", back_populates="schedule")
 
 class Appointment(Base):
     __tablename__ = "appointment"

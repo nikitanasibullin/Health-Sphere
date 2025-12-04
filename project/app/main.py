@@ -7,7 +7,7 @@ import models
 #import schemas
 #import utils
 from database import engine, get_db
-#from routers import post, user, auth, vote
+from routers import admin, doctor, patient
 from config import settings
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -24,3 +24,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+#app.include_router(doctor.router)
+app.include_router(patient.router)
+app.include_router(admin.router)
