@@ -85,6 +85,33 @@ def create_doctor_simple(
             detail=f"Ошибка: {str(e)}"
         )
     
+@router.post("/schedule", response_model=dict)
+def create_schedule(
+    schedule: schemas.ScheduleCreate,
+    db: Session = Depends(get_db)
+):
+
+    try:
+        # Просто создаем объект доктора
+        db_doctor = models.Schedule(**schedule.model_dump())
+        
+        # Добавляем в базу
+        db.add(db_doctor)
+        db.commit()
+        
+        return {
+            "status": "success",
+            "doctor_id": db_doctor.id,
+            "message": f"Д создан"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибка: {str(e)}"
+        )
+    
     
 def delete_doctor(
     doctor_id: int,

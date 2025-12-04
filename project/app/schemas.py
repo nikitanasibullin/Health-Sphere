@@ -1,6 +1,6 @@
 from pydantic import BaseModel,EmailStr, Field
 from pydantic.types import Annotated
-from datetime import datetime
+from datetime import date, time, datetime
 from typing import Optional
 
 class SpecializationResponse(BaseModel):
@@ -19,6 +19,7 @@ class DoctorResponse(BaseModel):
     class Config: 
         from_attributes = True
 
+
 class DoctorCreate(BaseModel):
     first_name: str
     last_name: str
@@ -31,3 +32,19 @@ class DoctorCreate(BaseModel):
 class SpecializationCreate(BaseModel):
     name: str
     description: Optional[str] = None
+
+class ScheduleResponse(BaseModel):
+    id: int
+    office_number: str
+    date : date
+    start_time: time
+    end_time: time
+    doctor: DoctorResponse
+
+class ScheduleCreate(BaseModel):
+    office_number: str
+    date : date
+    start_time: time
+    end_time: time
+    is_available: bool
+    doctor_id: int
