@@ -1,4 +1,4 @@
-from pydantic import BaseModel,EmailStr, Field
+from pydantic import BaseModel,EmailStr, Field, field_validator
 from pydantic.types import Annotated
 from datetime import date, time, datetime
 from typing import Optional
@@ -48,3 +48,14 @@ class ScheduleCreate(BaseModel):
     end_time: time
     is_available: bool
     doctor_id: int
+
+class ScheduleBatchCreate(BaseModel):
+    doctor_id: int
+    date: date
+    start_time: time
+    end_time: time
+    slots_count: int
+    office_number: str = None
+    
+    class Config:
+        from_attributes = True
