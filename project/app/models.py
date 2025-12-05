@@ -67,7 +67,6 @@ class Specialization(Base):
     
     # Define relationship back
     doctors = relationship("Doctor", back_populates="specialization")
-    services = relationship("Service", back_populates="specialization") 
 
 
 class Doctor(Base):
@@ -113,22 +112,6 @@ class Doctor(Base):
 
 
 
-class Service(Base):
-    __tablename__ = "service"
-    
-    id = Column(Integer, primary_key=True)
-    specialization_id = Column(Integer, ForeignKey('specialization.id'), nullable=False)
-    service_name = Column(String(100), nullable=False)
-    description = Column(String(100))
-    price = Column(Integer, nullable=False)
-    duration_minutes = Column(Integer, nullable=False)
-    
-    specialization = relationship("Specialization", back_populates="services")
-    
-    __table_args__ = (
-        CheckConstraint("price > 0", name='check_positive_price'),
-        CheckConstraint("duration_minutes > 0", name='check_positive_duration'),
-    )
 
 class Schedule(Base):
     __tablename__ = "schedule"
@@ -156,7 +139,6 @@ class Appointment(Base):
     id = Column(Integer, primary_key=True)
     patient_id = Column(Integer, ForeignKey('patient.id'), nullable=False)
     schedule_id = Column(Integer, ForeignKey('schedule.id'), nullable=False)
-    service_id = Column(Integer, ForeignKey('service.id'), nullable=False)
     status = Column(String(50), nullable=False, default='scheduled')
     information = Column(Text)
     
