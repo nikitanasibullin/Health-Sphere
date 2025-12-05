@@ -112,3 +112,60 @@ class AppointmentUpdate(BaseModel):
         if v is not None and v not in ['scheduled', 'completed', 'cancelled', 'no-show']:
             raise ValueError('Недопустимый статус')
         return v
+    
+class PatientMedicamentBase(BaseModel):
+    medicament_name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    start_date: Optional[date] = Field(default_factory=lambda: date.today())
+    end_date: Optional[date] = None
+    prescribed_by: Optional[str] = None
+    notes: Optional[str] = None
+
+class PatientMedicamentCreate(PatientMedicamentBase):
+    pass
+
+class PatientMedicamentResponse(PatientMedicamentBase):
+    id: int
+    patient_id: int
+    
+    class Config:
+        from_attributes = True
+
+class MedicamentsForAppointmentRequest(BaseModel):
+    medicaments: List[PatientMedicamentCreate]
+
+    @field_validator('medicaments')
+    def validate_medicaments(cls, v):
+        if not v:
+            raise ValueError('Список лекарств не может быть пустым')
+        return v
+    
+class PatientMedicamentResponse(BaseModel):
+    id: int
+    patient_id: int
+    medicament_name: str
+    dosage: Optional[str] = None
+    frequency: Optional[str] = None
+    start_date: date
+    end_date: Optional[date] = None
+    prescribed_by: Optional[str] = None
+    notes: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class MedicamentConflictResponse(BaseModel):
+    """Модель для конфликтного лекарства"""
+    medicament_name: str
+    conflict_reasons: List[str]
+    
+class MedicamentsAppointmentResponse(BaseModel):
+    """Модель ответа при назначении лекарств"""
+    added_medicaments: List[PatientMedicamentResponse]
+    conflicts: List[MedicamentConflictResponse] = []
+    warning: Optional[str] = None
+    message: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
