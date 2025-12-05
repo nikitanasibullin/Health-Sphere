@@ -92,6 +92,8 @@ class AppointmentResponseToPatient(BaseModel):
 class AppointmentResponse(BaseModel):
     schedule: ScheduleResponse
     patient: PatientResponse
+    information: str
+    id: int
 
 class MedicamentContradictionsRequest(BaseModel):
     medicament_name: str
@@ -100,3 +102,13 @@ class MedicamentContradictionsRequest(BaseModel):
 class MedicamentContradictionRequest(BaseModel):
     medicament_name: str
     contradictions: str
+
+class AppointmentUpdate(BaseModel):
+    information: Optional[str] = None
+    status: Optional[str] = None
+    
+    @field_validator('status')
+    def validate_status(cls, v):
+        if v is not None and v not in ['scheduled', 'completed', 'cancelled', 'no-show']:
+            raise ValueError('Недопустимый статус')
+        return v

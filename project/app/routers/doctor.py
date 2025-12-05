@@ -160,3 +160,55 @@ def delete_medicament_contradiction(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при удалении противопоказания: {str(e)}"
         )
+    
+
+@router.put("/appointments/{appointment_id}", response_model=schemas.AppointmentResponse)
+def update_appointment_info(
+    appointment_id: int,
+    update_data: schemas.AppointmentUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Обновление информации о записи на прием.
+    Доктор может добавить информацию о приеме (результаты осмотра, назначения и т.д.)
+    и изменить статус приема.
+    """
+    try:
+        # Получаем запись на прием
+        db_appointment = db.query(models.Appointment)\
+            .filter(models.Appointment.id == appointment_id)\
+            .first()
+        
+        if not db_appointment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Запись на прием с ID {appointment_id} не найдена"
+            )
+        
+        # Обновляем информацию, если она предоставлена
+        if update_data.information is not None:
+            # Если уже есть информация, добавляем новую с новой строки
+            if db_appointment.information:
+                db_appointment.information = db_appointment.information + "\n\n" + update_data.information
+            else:
+                db_appointment.information = update_data.information
+        
+        # Обновляем статус, если он предоставлен
+        if update_data.status is not None:
+            db_appointment.status = update_data.status
+        
+        # Сохраняем изменения
+        db.commit()
+        db.refresh(db_appointment)
+        
+        return db_appointment
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при обновлении записи на прием: {str(e)}"
+        )
