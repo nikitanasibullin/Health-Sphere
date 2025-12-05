@@ -55,9 +55,16 @@ def create_specialization(
             response_model=List[schemas.PatientResponse],
             summary="Получить всех пациентов ")
 def get_all_specializations(db: Session = Depends(get_db)):
-    """Получить список всех медицинских специализаций."""
+
     specializations = db.query(models.Patient).all()
     return specializations
+
+@router.get("/appointments",
+            response_model=List[schemas.AppointmentResponse],
+            summary="Получить все записи ")
+def get_all_specializations(db: Session = Depends(get_db)):
+    appointments = db.query(models.Appointment).all()
+    return appointments
 
 
 @router.get("/specializations",

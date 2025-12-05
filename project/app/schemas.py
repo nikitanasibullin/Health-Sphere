@@ -23,6 +23,7 @@ class PatientResponse(BaseModel):
     birth_date: date
     phone_number: str
     email: EmailStr
+    id: int
 
 class SpecializationResponse(BaseModel):
 
