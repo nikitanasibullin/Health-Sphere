@@ -3,6 +3,27 @@ from pydantic.types import Annotated
 from datetime import date, time, datetime
 from typing import Optional
 
+class PatientCreate(BaseModel):
+    first_name: str
+    last_name: str
+    patronymic: str
+    gender: str
+    passport_number: str
+    insurance_number: str
+    birth_date: date
+    phone_number: str
+    email: EmailStr
+    password: str
+
+class PatientResponse(BaseModel):
+    first_name: str
+    last_name: str
+    patronymic: str
+    gender: str
+    birth_date: date
+    phone_number: str
+    email: EmailStr
+
 class SpecializationResponse(BaseModel):
 
     name: str
@@ -59,3 +80,14 @@ class ScheduleBatchCreate(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class AppointmentCreate(BaseModel):
+    schedule_id: int
+
+class AppointmentResponseToPatient(BaseModel):
+    schedule: ScheduleResponse
+
+class AppointmentResponse(BaseModel):
+    schedule: ScheduleResponse
+    patient: PatientResponse
