@@ -156,7 +156,6 @@ class Appointment(Base):
 class Contradiction(Base):
     __tablename__ = "contradiction"
     
-    
     medicament_name = Column(String(50), primary_key=True, nullable=False)
     contradiction = Column(String(50), primary_key=True, nullable=False)
 

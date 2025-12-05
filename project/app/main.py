@@ -29,3 +29,4 @@ app.add_middleware(
 #app.include_router(doctor.router)
 app.include_router(patient.router)
 app.include_router(admin.router)
+app.include_router(doctor.router)

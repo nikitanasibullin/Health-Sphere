@@ -1,7 +1,7 @@
 from pydantic import BaseModel,EmailStr, Field, field_validator
 from pydantic.types import Annotated
 from datetime import date, time, datetime
-from typing import Optional
+from typing import Optional, List
 
 class PatientCreate(BaseModel):
     first_name: str
@@ -92,3 +92,11 @@ class AppointmentResponseToPatient(BaseModel):
 class AppointmentResponse(BaseModel):
     schedule: ScheduleResponse
     patient: PatientResponse
+
+class MedicamentContradictionsRequest(BaseModel):
+    medicament_name: str
+    contradictions: List[str]
+
+class MedicamentContradictionRequest(BaseModel):
+    medicament_name: str
+    contradictions: str
