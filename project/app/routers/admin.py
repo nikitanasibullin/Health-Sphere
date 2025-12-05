@@ -50,17 +50,27 @@ def create_specialization(
             detail="Ошибка при создании специализации"
         )
 
+
+@router.get("/patients",
+            response_model=List[schemas.PatientResponse],
+            summary="Получить всех пациентов ")
+def get_all_specializations(db: Session = Depends(get_db)):
+    """Получить список всех медицинских специализаций."""
+    specializations = db.query(models.Patient).all()
+    return specializations
+
+
 @router.get("/specializations",
             response_model=List[schemas.SpecializationResponse],
             summary="Получить все специализации")
 def get_all_specializations(db: Session = Depends(get_db)):
     """Получить список всех медицинских специализаций."""
-    specializations = next(db.query(models.Specialization).first())
+    specializations = db.query(models.Specialization).all()
     return specializations
 
 
 @router.post("/doctors", response_model=dict)
-def create_doctor_simple(
+def create_doctor(
     doctor: schemas.DoctorCreate,
     db: Session = Depends(get_db)
 ):
@@ -94,16 +104,16 @@ def create_schedule(
 
     try:
         # Просто создаем объект доктора
-        db_doctor = models.Schedule(**schedule.model_dump())
+        db_schedule = models.Schedule(**schedule.model_dump())
         
         # Добавляем в базу
-        db.add(db_doctor)
+        db.add(db_schedule)
         db.commit()
         
         return {
             "status": "success",
-            "doctor_id": db_doctor.id,
-            "message": f"Д создан"
+            "doctor_id": db_schedule.id,
+            "message": f"Расписание создано"
         }
         
     except Exception as e:

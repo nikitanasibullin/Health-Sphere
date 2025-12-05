@@ -10,6 +10,33 @@ router = APIRouter(
     tags=['patient']
 )
 
+@router.post("/registration", response_model=dict)
+def create_patient(
+    patient: schemas.PatientCreate,
+    db: Session = Depends(get_db)
+):
+
+    try:
+        # Просто создаем объект доктора
+        db_patient = models.Patient(**patient.model_dump())
+        
+        # Добавляем в базу
+        db.add(db_patient)
+        db.commit()
+        
+        return {
+            "status": "success",
+            "patient_id": db_patient.id,
+            "message": f"Пациент {patient.first_name} создан"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибка: {str(e)}"
+        )
+    
 
 @router.get("/doctors",response_model=List[schemas.DoctorResponse])
 def get_doctors(db: Session = Depends(get_db)):
