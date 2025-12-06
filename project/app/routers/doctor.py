@@ -1,4 +1,4 @@
-import models,schemas
+import models,schemas,oauth2,utils
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from database import get_db
@@ -6,6 +6,7 @@ from typing import Optional,List
 from sqlalchemy import func, and_
 from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
+from datetime import date
 
 router = APIRouter(
     prefix = "/doctor",
@@ -14,15 +15,12 @@ router = APIRouter(
 
 @router.post("/medicaments/contraindications", response_model=dict)
 def add_medicament_contradiction(
-    request_data: schemas.MedicamentContradictionsRequest,  # Принимаем данные из тела запроса
+    request_data: schemas.MedicamentContradictionsRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
     db: Session = Depends(get_db)
 ):
     """
     Добавление противопоказаний для лекарства.
-    
-    Args:
-        medicament_name: Название лекарства
-        contradictions: Список противопоказаний
     """
     try:
         medicament_name = request_data.medicament_name
@@ -30,7 +28,6 @@ def add_medicament_contradiction(
         added_count = 0
         
         for contradiction in contradictions:
-            # Проверяем, не существует ли уже такая запись
             existing = db.query(models.Contradiction)\
                 .filter(
                     and_(
@@ -41,9 +38,8 @@ def add_medicament_contradiction(
                 .first()
             
             if existing:
-                continue  # Пропускаем, если уже существует
+                continue
             
-            # Создаем новую запись о противопоказании
             db_contradiction = models.Contradiction(
                 medicament_name=medicament_name,
                 contradiction=contradiction
@@ -58,7 +54,8 @@ def add_medicament_contradiction(
                 "status": "success",
                 "message": f"Добавлено {added_count} противопоказаний для лекарства '{medicament_name}'",
                 "medicament_name": medicament_name,
-                "added_contradictions": contradictions
+                "added_contradictions": contradictions,
+                "added_by_doctor": f"Dr. {current_doctor.last_name}"
             }
         else:
             return {
@@ -79,18 +76,16 @@ def add_medicament_contradiction(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при добавлении противопоказаний: {str(e)}"
         )
-
+    
 
 @router.get("/medicaments/contraindications", response_model=List[dict])
 def get_medicament_contradictions(
     medicament_name: Optional[str] = None,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
     db: Session = Depends(get_db)
 ):
     """
     Получение списка противопоказаний для лекарств.
-    
-    Args:
-        medicament_name: Фильтр по названию лекарства (опционально)
     """
     try:
         query = db.query(models.Contradiction)
@@ -119,6 +114,7 @@ def get_medicament_contradictions(
 @router.delete("/medicaments/contraindications", response_model=dict)
 def delete_medicament_contradiction(
     request_data: schemas.MedicamentContradictionRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
     db: Session = Depends(get_db)
 ):
     """
@@ -127,7 +123,7 @@ def delete_medicament_contradiction(
     try:
         medicament_name = request_data.medicament_name
         contradiction = request_data.contradictions
-        # Находим запись
+        
         db_contradiction = db.query(models.Contradiction)\
             .filter(
                 and_(
@@ -148,7 +144,8 @@ def delete_medicament_contradiction(
         
         return {
             "status": "success",
-            "message": f"Противопоказание '{contradiction}' удалено для лекарства '{medicament_name}'"
+            "message": f"Противопоказание '{contradiction}' удалено для лекарства '{medicament_name}'",
+            "deleted_by_doctor": f"Dr. {current_doctor.last_name}"
         }
         
     except HTTPException:
@@ -166,12 +163,11 @@ def delete_medicament_contradiction(
 def update_appointment_info(
     appointment_id: int,
     update_data: schemas.AppointmentUpdate,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
     db: Session = Depends(get_db)
 ):
     """
     Обновление информации о записи на прием.
-    Доктор может добавить информацию о приеме (результаты осмотра, назначения и т.д.)
-    и изменить статус приема.
     """
     try:
         # Получаем запись на прием
@@ -185,19 +181,31 @@ def update_appointment_info(
                 detail=f"Запись на прием с ID {appointment_id} не найдена"
             )
         
-        # Обновляем информацию, если она предоставлена
-        if update_data.information is not None:
-            # Если уже есть информация, добавляем новую с новой строки
-            if db_appointment.information:
-                db_appointment.information = db_appointment.information + "\n\n" + update_data.information
-            else:
-                db_appointment.information = update_data.information
+        # Проверяем, что запись относится к текущему доктору
+        schedule = db.query(models.Schedule)\
+            .filter(models.Schedule.id == db_appointment.schedule_id)\
+            .first()
         
-        # Обновляем статус, если он предоставлен
+        if not schedule or schedule.doctor_id != current_doctor.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Эта запись не относится к вашему расписанию"
+            )
+        
+        # Обновляем информацию
+        if update_data.information is not None:
+            # Добавляем подпись доктора
+            info_with_signature = f"{update_data.information}\n\n— Dr. {current_doctor.last_name} {current_doctor.first_name[0]}."
+            
+            if db_appointment.information:
+                db_appointment.information = db_appointment.information + "\n\n" + info_with_signature
+            else:
+                db_appointment.information = info_with_signature
+        
+        # Обновляем статус
         if update_data.status is not None:
             db_appointment.status = update_data.status
         
-        # Сохраняем изменения
         db.commit()
         db.refresh(db_appointment)
         
@@ -217,12 +225,11 @@ def update_appointment_info(
 def add_medicaments_for_appointment(
     appointment_id: int,
     medicaments_data: schemas.MedicamentsForAppointmentRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
     db: Session = Depends(get_db)
 ):
     """
     Добавление лекарств пациенту на основе appointment ID.
-    Проверяет противопоказания пациента перед назначением.
-    Возвращает добавленные лекарства и список конфликтов.
     """
     try:
         # Получаем запись на прием
@@ -236,23 +243,23 @@ def add_medicaments_for_appointment(
                 detail=f"Запись на прием с ID {appointment_id} не найдена"
             )
         
-        # Получаем информацию о докторе из расписания
-        db_schedule = db.query(models.Schedule)\
+        # Проверяем, что запись относится к текущему доктору
+        schedule = db.query(models.Schedule)\
             .filter(models.Schedule.id == db_appointment.schedule_id)\
             .first()
         
-        if not db_schedule:
+        if not schedule or schedule.doctor_id != current_doctor.id:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Расписание для записи {appointment_id} не найдено"
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Эта запись не относится к вашему расписанию"
             )
         
-        #Получаем ВСЕ противопоказания пациента
+        # Получаем ВСЕ противопоказания пациента
         patient_contradictions = db.query(models.PatientContradiction)\
             .filter(models.PatientContradiction.patient_id == db_appointment.patient_id)\
             .all()
         
-        #Получаем ВСЕ лекарства пациента
+        # Получаем ВСЕ лекарства пациента
         patient_medicaments = db.query(models.PatientMedicament)\
             .filter(models.PatientMedicament.patient_id == db_appointment.patient_id)\
             .all()
@@ -268,7 +275,7 @@ def add_medicaments_for_appointment(
         for pm in patient_medicaments:
             all_patient_contraindications.add(pm.medicament_name)
         
-        # Получаем противопоказания для всех лекарств пациента из общей таблицы contradiction
+        # Получаем противопоказания для всех лекарств пациента
         if patient_medicaments:
             patient_medicament_names = [pm.medicament_name for pm in patient_medicaments]
             
@@ -285,21 +292,17 @@ def add_medicaments_for_appointment(
         for medicament_data in medicaments_data.medicaments:
             # ПРОВЕРКА: Является ли новое лекарство противопоказанием для пациента?
             if medicament_data.medicament_name in all_patient_contraindications:
-                # Находим точную причину
                 conflict_reasons = []
                 
                 # Проверяем все возможные причины
-                # 1. Прямое противопоказание
                 for pc in patient_contradictions:
                     if pc.contradiction == medicament_data.medicament_name:
                         conflict_reasons.append(f"Прямое противопоказание: пациент не переносит '{medicament_data.medicament_name}'")
                 
-                # 2. Уже принимает это лекарство
                 for pm in patient_medicaments:
                     if pm.medicament_name == medicament_data.medicament_name:
                         conflict_reasons.append(f"Пациент уже принимает это лекарство (назначено {pm.start_date})")
                 
-                # 3. Противопоказание для уже принимаемых лекарств
                 if patient_medicaments:
                     specific_contradictions = db.query(models.Contradiction)\
                         .filter(
@@ -315,7 +318,7 @@ def add_medicaments_for_appointment(
                     "medicament_name": medicament_data.medicament_name,
                     "conflict_reasons": conflict_reasons if conflict_reasons else ["Общее противопоказание"]
                 })
-                continue  # Пропускаем это лекарство
+                continue
             
             # Если проверки прошли успешно - создаем запись
             db_medicament = models.PatientMedicament(
@@ -325,14 +328,14 @@ def add_medicaments_for_appointment(
                 frequency=medicament_data.frequency,
                 start_date=medicament_data.start_date,
                 end_date=medicament_data.end_date,
-                prescribed_by=f"Dr. {db_schedule.doctor.last_name} {db_schedule.doctor.first_name[0]}.",
+                prescribed_by=f"Dr. {current_doctor.last_name} {current_doctor.first_name[0]}.",  # ← Используем current_doctor
                 notes=medicament_data.notes
             )
             
             db.add(db_medicament)
             added_medicaments.append(db_medicament)
         
-        # Если НИ ОДНО лекарство не было добавлено (все имеют конфликты)
+        # Если НИ ОДНО лекарство не было добавлено
         if not added_medicaments:
             error_message = "Ни одно лекарство не было добавлено из-за медицинских противопоказаний:\n"
             for conflict in conflicted_medicaments:
@@ -347,7 +350,7 @@ def add_medicaments_for_appointment(
 
         # Обновляем информацию о назначении в записи приема
         medicament_names = [m.medicament_name for m in added_medicaments]
-        info_text = f"Назначены лекарства: {', '.join(medicament_names)}"
+        info_text = f"Назначены лекарства: {', '.join(medicament_names)} (назначил: Dr. {current_doctor.last_name})"
 
         # Добавляем предупреждения о конфликтах, если они есть
         warning_message = None
@@ -360,12 +363,12 @@ def add_medicaments_for_appointment(
                     warning_text += f"  • {reason}\n"
             info_text += warning_text
             
-            # Формируем warning для ответа
             warning_message = f"{len(conflicted_medicaments)} лекарств не были назначены из-за противопоказаний"
             success_message = f"Успешно добавлено {len(added_medicaments)} лекарств"
         else:
             success_message = f"Все {len(added_medicaments)} лекарств успешно добавлены"
 
+        # Обновляем информацию в записи приема
         if db_appointment.information:
             db_appointment.information = db_appointment.information + "\n\n" + info_text
         else:
@@ -406,4 +409,210 @@ def add_medicaments_for_appointment(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при добавлении лекарств: {str(e)}"
+        )
+    
+# Получение всех записей на прием к текущему доктору
+@router.get("/appointments", response_model=List[schemas.AppointmentResponse])
+def get_my_appointments(
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Получение всех записей на прием к текущему доктору
+    """
+    try:
+        # Получаем ID расписаний доктора
+        doctor_schedule_ids = db.query(models.Schedule.id)\
+            .filter(models.Schedule.doctor_id == current_doctor.id)\
+            .subquery()
+        
+        # Запрос на записи к доктору
+        query = db.query(models.Appointment)\
+            .filter(models.Appointment.schedule_id.in_(doctor_schedule_ids))
+        
+        if status_filter:
+            query = query.filter(models.Appointment.status == status_filter)
+        
+        appointments = query.order_by(models.Appointment.id.desc()).all()
+        
+        return appointments
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении записей: {str(e)}"
+        )
+
+
+
+@router.get("/patients/{patient_id}/medicaments", response_model=List[schemas.PatientMedicamentResponse])
+def get_patient_medicaments(
+    patient_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение всех лекарств пациента.
+    Доктор может просматривать лекарства любого пациента.
+    """
+    try:
+        # Проверяем существование пациента
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пациент с ID {patient_id} не найден"
+            )
+        
+        # Получаем все лекарства пациента
+        medicaments = db.query(models.PatientMedicament)\
+            .filter(models.PatientMedicament.patient_id == patient_id)\
+            .order_by(
+                models.PatientMedicament.start_date.desc(),
+                models.PatientMedicament.medicament_name.asc()
+            )\
+            .all()
+        
+        return medicaments
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении лекарств пациента: {str(e)}"
+        )
+    
+@router.get("/patients/{patient_id}/medicaments/active", response_model=List[schemas.PatientMedicamentResponse])
+def get_patient_active_medicaments(
+    patient_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение только активных лекарств пациента (без end_date или с end_date в будущем).
+    """
+    try:
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пациент с ID {patient_id} не найден"
+            )
+        
+        # Получаем активные лекарства
+        active_medicaments = db.query(models.PatientMedicament)\
+            .filter(models.PatientMedicament.patient_id == patient_id)\
+            .filter(
+                (models.PatientMedicament.end_date.is_(None)) |
+                (models.PatientMedicament.end_date >= date.today())
+            )\
+            .order_by(models.PatientMedicament.start_date.desc())\
+            .all()
+        
+        return active_medicaments
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении активных лекарств: {str(e)}"
+        )
+    
+@router.get("/patients/{patient_id}/medication", response_model=dict)
+def get_patient_medication_report(
+    patient_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Полный отчет о лекарствах и противопоказаниях пациента.
+    Возвращает лекарства пациента + все противопоказания (прямые и из базы лекарств).
+    """
+    try:
+        # Проверяем существование пациента
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пациент с ID {patient_id} не найден"
+            )
+        
+        # 1. Получаем все лекарства пациента
+        patient_medicaments = db.query(models.PatientMedicament)\
+            .filter(models.PatientMedicament.patient_id == patient_id)\
+            .order_by(models.PatientMedicament.start_date.desc())\
+            .all()
+        
+        # 2. Получаем прямые противопоказания пациента
+        patient_contradictions = db.query(models.PatientContradiction)\
+            .filter(models.PatientContradiction.patient_id == patient_id)\
+            .all()
+        
+        # 3. Получаем названия лекарств пациента
+        medicament_names = [pm.medicament_name for pm in patient_medicaments]
+        
+        # 4. Получаем противопоказания для лекарств пациента из общей базы
+        medicament_contradictions = []
+        if medicament_names:
+            medicament_contradictions = db.query(models.Contradiction)\
+                .filter(models.Contradiction.medicament_name.in_(medicament_names))\
+                .all()
+        
+        # 5. Формируем отчет
+        report = {
+            "patient_info": {
+                "id": patient.id,
+                "full_name": f"{patient.last_name} {patient.first_name} {patient.patronymic}",
+                "birth_date": patient.birth_date
+            },
+            "medicaments": [
+                {
+                    "id": pm.id,
+                    "name": pm.medicament_name,
+                    "dosage": pm.dosage,
+                    "frequency": pm.frequency,
+                    "start_date": pm.start_date,
+                    "end_date": pm.end_date,
+                    "prescribed_by": pm.prescribed_by,
+                    "is_active": pm.end_date is None or pm.end_date >= date.today()
+                }
+                for pm in patient_medicaments
+            ],
+            "direct_contraindications": [
+                {
+                    "id": pc.id,
+                    "contradiction": pc.contradiction
+                }
+                for pc in patient_contradictions
+            ],
+            "medicament_based_contraindications": [
+                {
+                    "medicament_name": mc.medicament_name,
+                    "contradiction": mc.contradiction
+                }
+                for mc in medicament_contradictions
+            ],
+            "summary": {
+                "total_medicaments": len(patient_medicaments),
+                "active_medicaments": len([pm for pm in patient_medicaments 
+                                         if pm.end_date is None or pm.end_date >= date.today()]),
+                "total_direct_contraindications": len(patient_contradictions),
+                "total_medicament_contraindications": len(medicament_contradictions)
+            }
+        }
+        
+        return report
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при получении отчета: {str(e)}"
         )

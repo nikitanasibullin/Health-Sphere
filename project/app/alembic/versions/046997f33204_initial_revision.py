@@ -1,8 +1,8 @@
-"""Initial generation
+"""Initial revision
 
-Revision ID: 55d1e600dfec
+Revision ID: 046997f33204
 Revises: 
-Create Date: 2025-12-05 14:21:25.697485
+Create Date: 2025-12-06 12:29:52.619185
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '55d1e600dfec'
+revision: str = '046997f33204'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,6 +25,47 @@ def upgrade() -> None:
     sa.Column('medicament_name', sa.String(length=50), nullable=False),
     sa.Column('contradiction', sa.String(length=50), nullable=False),
     sa.PrimaryKeyConstraint('medicament_name', 'contradiction')
+    )
+    op.create_table('specialization',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
+    )
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('email', sa.String(), nullable=False),
+    sa.Column('password', sa.String(), nullable=False),
+    sa.Column('user_type', sa.String(), nullable=False),
+    sa.Column('user_type_id', sa.Integer(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    op.create_table('doctor',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('first_name', sa.String(), nullable=False),
+    sa.Column('last_name', sa.String(), nullable=False),
+    sa.Column('patronymic', sa.String(), nullable=False),
+    sa.Column('phone_number', sa.String(), nullable=False),
+    sa.Column('email', sa.String(), nullable=False),
+    sa.Column('password', sa.String(), nullable=False),
+    sa.Column('specialization_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("email ~ '^[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'", name='check_email_format'),
+    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]+$'", name='check_first_name_format'),
+    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]+$'", name='check_last_name_format'),
+    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]+$'", name='check_patronymic_format'),
+    sa.CheckConstraint("phone_number ~ '^[0-9]+$'", name='check_phone_number_format'),
+    sa.ForeignKeyConstraint(['specialization_id'], ['specialization.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('phone_number'),
+    sa.UniqueConstraint('user_id')
     )
     op.create_table('patient',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -39,45 +80,20 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
     sa.CheckConstraint("email ~ '^[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'", name='check_email_format'),
     sa.CheckConstraint("first_name ~ '^[A-Z][a-z]+$'", name='check_first_name_format'),
     sa.CheckConstraint("gender IN ('female','male')", name='check_gender_format'),
     sa.CheckConstraint("last_name ~ '^[A-Z][a-z]+$'", name='check_last_name_format'),
     sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]+$'", name='check_patronymic_format'),
     sa.CheckConstraint("phone_number ~ '^[0-9]+$'", name='check_phone_number_format'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('insurance_number'),
     sa.UniqueConstraint('passport_number'),
-    sa.UniqueConstraint('phone_number')
-    )
-    op.create_table('specialization',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
-    )
-    op.create_table('doctor',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('first_name', sa.String(), nullable=False),
-    sa.Column('last_name', sa.String(), nullable=False),
-    sa.Column('patronymic', sa.String(), nullable=False),
-    sa.Column('phone_number', sa.String(), nullable=False),
-    sa.Column('email', sa.String(), nullable=False),
-    sa.Column('password', sa.String(), nullable=False),
-    sa.Column('specialization_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("email ~ '^[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'", name='check_email_format'),
-    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]+$'", name='check_first_name_format'),
-    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]+$'", name='check_last_name_format'),
-    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]+$'", name='check_patronymic_format'),
-    sa.CheckConstraint("phone_number ~ '^[0-9]+$'", name='check_phone_number_format'),
-    sa.ForeignKeyConstraint(['specialization_id'], ['specialization.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('phone_number')
+    sa.UniqueConstraint('phone_number'),
+    sa.UniqueConstraint('user_id')
     )
     op.create_table('patient_contradiction',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -136,8 +152,11 @@ def downgrade() -> None:
     op.drop_table('schedule')
     op.drop_table('patient_medicament')
     op.drop_table('patient_contradiction')
-    op.drop_table('doctor')
-    op.drop_table('specialization')
     op.drop_table('patient')
+    op.drop_table('doctor')
+    op.drop_index(op.f('ix_users_id'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
+    op.drop_table('specialization')
     op.drop_table('contradiction')
     # ### end Alembic commands ###

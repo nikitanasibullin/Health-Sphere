@@ -5,6 +5,13 @@ from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
 from sqlalchemy import CheckConstraint
 
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password = Column(String, nullable=False)
+    user_type = Column(String, nullable=False)  # 'patient' или 'doctor'
 
 class Patient(Base):
     __tablename__= "patient"
@@ -27,6 +34,8 @@ class Patient(Base):
     appointments = relationship("Appointment", back_populates="patient")
     medicaments = relationship("PatientMedicament", back_populates="patient", cascade="all, delete-orphan")
     contradictions = relationship("PatientContradiction", back_populates="patient", cascade="all, delete-orphan")
+
+    user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=True)
 
     __table_args__ = (
         CheckConstraint(
@@ -84,6 +93,8 @@ class Doctor(Base):
 
     specialization = relationship("Specialization", back_populates="doctors")
     schedules = relationship("Schedule", back_populates="doctor")
+
+    user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=True)
 
     __table_args__ = (
         CheckConstraint(

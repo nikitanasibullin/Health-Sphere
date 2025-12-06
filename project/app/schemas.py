@@ -88,11 +88,14 @@ class AppointmentCreate(BaseModel):
 
 class AppointmentResponseToPatient(BaseModel):
     schedule: ScheduleResponse
+    id: int
+    status: str
 
 class AppointmentResponse(BaseModel):
     schedule: ScheduleResponse
     patient: PatientResponse
     information: str
+    status: str
     id: int
 
 class MedicamentContradictionsRequest(BaseModel):
@@ -169,3 +172,16 @@ class MedicamentsAppointmentResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user_type: str  # 'patient' или 'doctor'
+
+class TokenData(BaseModel):
+    id: Optional[str] = None
+    user_type: Optional[str] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str

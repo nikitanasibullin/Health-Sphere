@@ -1,4 +1,4 @@
-import models,schemas
+import models,schemas, oauth2, utils
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from database import get_db
@@ -76,32 +76,83 @@ def get_all_specializations(db: Session = Depends(get_db)):
     return specializations
 
 
-@router.post("/doctors", response_model=dict)
-def create_doctor(
-    doctor: schemas.DoctorCreate,
+@router.post("/doctor", response_model=schemas.Token)
+def register_doctor(
+    doctor_data: schemas.DoctorCreate,
     db: Session = Depends(get_db)
 ):
-
-    try:
-        # Просто создаем объект доктора
-        db_doctor = models.Doctor(**doctor.model_dump())
-        
-        # Добавляем в базу
-        db.add(db_doctor)
-        db.commit()
-        
-        return {
-            "status": "success",
-            "doctor_id": db_doctor.id,
-            "message": f"Доктор {doctor.first_name} создан"
-        }
-        
-    except Exception as e:
-        db.rollback()
+    """
+    Регистрация врача с созданием пользователя и профиля
+    """
+    # Проверяем, существует ли пользователь с таким email
+    existing_user = db.query(models.User).filter(
+        models.User.email == doctor_data.email
+    ).first()
+    
+    if existing_user:
         raise HTTPException(
-            status_code=400,
-            detail=f"Ошибка: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователь с таким email уже существует"
         )
+    
+    # Проверяем уникальность данных врача
+    existing_doctor = db.query(models.Doctor).filter(
+        (models.Doctor.email == doctor_data.email) |
+        (models.Doctor.phone_number == doctor_data.phone_number)
+    ).first()
+    
+    if existing_doctor:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Врач с такими данными уже существует"
+        )
+    
+    # Хешируем пароль
+    hashed_password = utils.hash(doctor_data.password)
+    
+    # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
+    db_user = models.User(
+        email=doctor_data.email,
+        password=hashed_password,
+        user_type='doctor',
+    )
+    
+    db.add(db_user)
+    db.flush()
+    
+    # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
+    db_doctor = models.Doctor(
+        first_name=doctor_data.first_name,
+        last_name=doctor_data.last_name,
+        patronymic=doctor_data.patronymic,
+        phone_number=doctor_data.phone_number,
+        email=doctor_data.email,
+        password=hashed_password,  # для совместимости
+        specialization_id=doctor_data.specialization_id,
+        user_id=db_user.id  # связь с users
+    )
+    
+    db.add(db_doctor)
+    db.flush()
+    
+    # 3. ОБНОВЛЯЕМ ПОЛЬЗОВАТЕЛЯ
+    db_user.user_type_id = db_doctor.id
+    
+    db.commit()
+    
+    # Создаем токен
+    access_token = oauth2.create_access_token(
+        data={
+            "user_id": db_user.id,
+            "user_type": 'doctor'
+        }
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_type": "doctor"
+    }
     
 @router.post("/schedule", response_model=dict)
 def create_schedule(
