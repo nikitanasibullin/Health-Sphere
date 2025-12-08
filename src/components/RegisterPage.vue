@@ -71,6 +71,92 @@
           />
         </div>
 
+        <!-- Birth Date and Gender Row -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <!-- Birth Date -->
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2">
+              <i class="fas fa-calendar-alt mr-2 text-cyan-500"></i>Birth Date
+            </label>
+            <input
+              v-model="registerForm.birthDate"
+              type="date"
+              required
+              :max="maxDate"
+              :min="minDate"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
+            />
+          </div>
+
+          <!-- Gender -->
+          <div>
+            <label class="block text-gray-700 text-sm font-bold mb-2">
+              <i class="fas fa-venus-mars mr-2 text-cyan-500"></i>Gender
+            </label>
+            <select
+              v-model="registerForm.gender"
+              required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200 bg-white"
+            >
+              <option value="" disabled>Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Passport Data -->
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">
+            <i class="fas fa-id-card mr-2 text-cyan-500"></i>Passport Series & Number
+          </label>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <input
+                v-model="registerForm.passportNumber"
+                type="text"
+                required
+                maxlength="10"
+                placeholder="Series (4 digits) & Number (6 digits)"
+                @input="validatePassportNumber"
+                :class="[
+                  'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200',
+                  passportNumberError ? 'border-red-400 bg-red-50' : 'border-gray-300',
+                ]"
+              />
+              <p v-if="passportNumberError" class="text-red-500 text-xs mt-1">
+                {{ passportNumberError }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">
+            <i class="fas fa-id-card mr-2 text-cyan-500"></i>Insurance number
+          </label>
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <input
+                v-model="registerForm.insuranceNumber"
+                type="text"
+                required
+                maxlength="16"
+                placeholder="Number (16 digits)"
+                @input="validateInsuranceNumber"
+                :class="[
+                    'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200',
+                    insuranceNumberError ? 'border-red-400 bg-red-50' : 'border-gray-300',
+                  ]"
+              />
+              <p v-if="insuranceNumberError" class="text-red-500 text-xs mt-1">
+                {{ insuranceNumberError }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+
         <!-- Password -->
         <div class="mb-4">
           <label class="block text-gray-700 text-sm font-bold mb-2">
@@ -86,99 +172,40 @@
           />
         </div>
 
-        <!-- Role Selection -->
-        <div class="mb-4">
+        <!-- Confirm Password -->
+        <div class="mb-6">
           <label class="block text-gray-700 text-sm font-bold mb-2">
-            <i class="fas fa-user-tag mr-2 text-cyan-500"> </i>
-            Register as
-          </label>
-          <div class="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              @click="registerForm.role = 'patient'"
-              :class="[
-                'p-4 rounded-lg border-2 transition duration-300',
-                registerForm.role === 'patient'
-                  ? 'border-cyan-500 bg-cyan-50'
-                  : 'border-gray-300 hover:border-cyan-300',
-              ]"
-            >
-              <i
-                class="fas fa-user-injured text-3xl mb-2"
-                :class="registerForm.role === 'patient' ? 'text-cyan-500' : 'text-gray-400'"
-              >
-              </i>
-              <p
-                class="font-semibold"
-                :class="registerForm.role === 'patient' ? 'text-cyan-700' : 'text-gray-700'"
-              >
-                Patient
-              </p>
-            </button>
-            <button
-              type="button"
-              @click="registerForm.role = 'doctor'"
-              :class="[
-                'p-4 rounded-lg border-2 transition duration-300',
-                registerForm.role === 'doctor'
-                  ? 'border-cyan-500 bg-cyan-50'
-                  : 'border-gray-300 hover:border-cyan-300',
-              ]"
-            >
-              <i
-                class="fas fa-user-md text-3xl mb-2"
-                :class="registerForm.role === 'doctor' ? 'text-cyan-500' : 'text-gray-400'"
-              >
-              </i>
-              <p
-                class="font-semibold"
-                :class="registerForm.role === 'doctor' ? 'text-cyan-700' : 'text-gray-700'"
-              >
-                Doctor
-              </p>
-            </button>
-          </div>
-        </div>
-        <!-- Doctor Specialization -->
-        <div v-if="registerForm.role === 'doctor'" class="mb-4 animate-fadeIn">
-          <label class="block text-gray-700 text-sm font-bold mb-2">
-            <i class="fas fa-stethoscope mr-2 text-cyan-500"></i>Specialization
-          </label>
-          <select
-            v-model="registerForm.specialization"
-            required
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
-          >
-            <option value="">Select specialization...</option>
-            <option value="Cardiology">Cardiology</option>
-            <option value="Neurology">Neurology</option>
-            <option value="Pediatrics">Pediatrics</option>
-            <option value="Orthopedics">Orthopedics</option>
-            <option value="Dermatology">Dermatology</option>
-            <option value="General Practice">General Practice</option>
-          </select>
-        </div>
-
-        <!-- Patient Age -->
-        <div v-if="registerForm.role === 'patient'" class="mb-4 animate-fadeIn">
-          <label class="block text-gray-700 text-sm font-bold mb-2">
-            <i class="fas fa-birthday-cake mr-2 text-cyan-500"></i>Age
+            <i class="fas fa-lock mr-2 text-cyan-500"></i>Confirm Password
           </label>
           <input
-            v-model="registerForm.age"
-            type="number"
+            v-model="registerForm.confirmPassword"
+            type="password"
             required
-            min="1"
-            max="120"
-            placeholder="Enter your age"
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
+            minlength="6"
+            placeholder="Repeat your password"
+            :class="[
+              'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200',
+              passwordMismatch ? 'border-red-400 bg-red-50' : 'border-gray-300',
+            ]"
           />
+          <p v-if="passwordMismatch" class="text-red-500 text-xs mt-1">
+            <i class="fas fa-exclamation-circle mr-1"></i>Passwords do not match
+          </p>
+          <p v-else-if="passwordsMatch" class="text-green-500 text-xs mt-1">
+            <i class="fas fa-check-circle mr-1"></i>Passwords match
+          </p>
         </div>
 
         <!-- Submit Button -->
         <button
           type="submit"
-          class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white py-3 rounded-lg hover:from-cyan-700 hover:to-blue-700 transition duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          :disabled="!isFormValid"
+          :class="[
+            'w-full py-3 rounded-lg transition duration-300 font-semibold shadow-lg transform',
+            isFormValid
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700 hover:shadow-xl hover:-translate-y-0.5'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+          ]"
         >
           <i class="fas fa-user-plus mr-2"></i>Create Account
         </button>
@@ -225,19 +252,90 @@ export default {
         email: '',
         phone: '',
         password: '',
-        role: 'patient',
-        specialization: '',
-        age: '',
+        confirmPassword: '',
+        birthDate: '',
+        gender: '',
+        passportNumber: '',
+        insuranceNumber: '',
       },
+      passportNumberError: '',
       registerError: '',
       registerSuccess: '',
     }
   },
+  computed: {
+    maxDate() {
+      const today = new Date()
+      today.setFullYear(today.getFullYear() - 1)
+      return today.toISOString().split('T')[0]
+    },
+    minDate() {
+      const today = new Date()
+      today.setFullYear(today.getFullYear() - 120)
+      return today.toISOString().split('T')[0]
+    },
+    passwordMismatch() {
+      return (
+        this.registerForm.confirmPassword.length > 0 &&
+        this.registerForm.password !== this.registerForm.confirmPassword
+      )
+    },
+    passwordsMatch() {
+      return (
+        this.registerForm.password.length >= 6 &&
+        this.registerForm.confirmPassword.length >= 6 &&
+        this.registerForm.password === this.registerForm.confirmPassword
+      )
+    },
+    isPassportValid() {
+      return (
+        this.registerForm.passportNumber.length === 10 &&
+        /^\d{6}$/.test(this.registerForm.passportNumber)
+      )
+    },
+    isFormValid() {
+      return (
+        this.registerForm.name &&
+        this.registerForm.email &&
+        this.registerForm.phone &&
+        this.registerForm.birthDate &&
+        this.registerForm.gender &&
+        this.registerForm.password.length >= 6 &&
+        this.passwordsMatch &&
+        this.isPassportValid &&
+        !this.passportNumberError &&
+        !this.insuranceNumberError
+      )
+    },
+  },
   methods: {
+    validatePassportNumber() {
+      this.registerForm.passportSeries = this.registerForm.passportSeries.replace(/\D/g, '')
+
+      if (
+        this.registerForm.passportSeries.length > 0 &&
+        this.registerForm.passportSeries.length < 10
+      ) {
+        this.passportNumberError = 'Must be 10 digits'
+      } else {
+        this.passportNumberError = ''
+      }
+    },
+    validateInsuranceNumber() {
+      this.registerForm.insuranceNumber = this.registerForm.insuranceNumber.replace(/\D/g, '')
+
+      if (
+        this.registerForm.insuranceNumber.length > 0 &&
+        this.registerForm.insuranceNumber.length < 16
+      ) {
+        this.insuranceNumberError = 'Must be 16 digits'
+      } else {
+        this.insuranceNumberError = ''
+      }
+    },
     register() {
       console.log('Registering:', this.registerForm)
 
-      // Basic validation
       if (
         !this.registerForm.name ||
         !this.registerForm.email ||
@@ -248,20 +346,34 @@ export default {
         return
       }
 
-      if (this.registerForm.role === 'doctor' && !this.registerForm.specialization) {
-        this.registerError = 'Please select a specialization'
+      if (!this.registerForm.birthDate) {
+        this.registerError = 'Please select your birth date'
         return
       }
 
-      if (this.registerForm.role === 'patient' && !this.registerForm.age) {
-        this.registerError = 'Please enter your age'
+      if (!this.registerForm.gender) {
+        this.registerError = 'Please select your gender'
+        return
+      }
+
+      if (!this.isPassportValid) {
+        this.registerError = 'Please enter valid passport data (4-digit series and 6-digit number)'
+        return
+      }
+
+      if (this.registerForm.password !== this.registerForm.confirmPassword) {
+        this.registerError = 'Passwords do not match'
+        return
+      }
+
+      if (this.registerForm.password.length < 6) {
+        this.registerError = 'Password must be at least 6 characters'
         return
       }
 
       this.registerError = ''
-      this.registerSuccess = 'Account created successfully! Redirecting to login...'
-
-      // Redirect to login after 2 seconds
+      this.registerSuccess = 'Account created successfully! Now you can login...'
+      alert('Account created successfully! Now you can login...')
       setTimeout(() => {
         this.$emit('navigate', 'login')
       }, 2000)
