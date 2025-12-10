@@ -32,17 +32,41 @@
         <!-- Full Name -->
         <div class="mb-4">
           <label class="block text-gray-700 text-sm font-bold mb-2">
-            <i class="fas fa-user mr-2 text-cyan-500"></i>Full Name
+            <i class="fas fa-user mr-2 text-cyan-500"></i>First Name
           </label>
           <input
-            v-model="registerForm.name"
+            v-model="registerForm.firstName"
             type="text"
             required
-            placeholder="Enter your full name"
+            placeholder="First Name"
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
           />
         </div>
 
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">
+            <i class="fas fa-user mr-2 text-cyan-500"></i>Last Name
+          </label>
+          <input
+            v-model="registerForm.lastName"
+            type="text"
+            required
+            placeholder="Last Name"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
+          />
+        </div>
+        <div class="mb-4">
+          <label class="block text-gray-700 text-sm font-bold mb-2">
+            <i class="fas fa-user mr-2 text-cyan-500"></i>Patronymic
+          </label>
+          <input
+            v-model="registerForm.patronymic"
+            type="text"
+            required
+            placeholder="Patronymic"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200"
+          />
+        </div>
         <!-- Email -->
         <div class="mb-4">
           <label class="block text-gray-700 text-sm font-bold mb-2">
@@ -242,13 +266,17 @@
 </template>
 
 <script>
+import http from 'http'
+
 export default {
   name: 'RegisterPage',
   emits: ['navigate'],
   data() {
     return {
       registerForm: {
-        name: '',
+        firstName: '',
+        lastName: '',
+        patronymic: '',
         email: '',
         phone: '',
         password: '',
@@ -258,6 +286,7 @@ export default {
         passportNumber: '',
         insuranceNumber: '',
       },
+      insuranceNumberError: '',
       passportNumberError: '',
       registerError: '',
       registerSuccess: '',
@@ -290,12 +319,21 @@ export default {
     isPassportValid() {
       return (
         this.registerForm.passportNumber.length === 10 &&
-        /^\d{6}$/.test(this.registerForm.passportNumber)
+        /^\d{10}$/.test(this.registerForm.passportNumber)
+      )
+    },
+
+    isInsuranceValid() {
+      return (
+        this.registerForm.insuranceNumber.length === 16 &&
+        /^\d{16}$/.test(this.registerForm.insuranceNumber)
       )
     },
     isFormValid() {
       return (
-        this.registerForm.name &&
+        this.registerForm.firstName &&
+        this.registerForm.lastName &&
+        this.registerForm.patronymic &&
         this.registerForm.email &&
         this.registerForm.phone &&
         this.registerForm.birthDate &&
@@ -303,6 +341,7 @@ export default {
         this.registerForm.password.length >= 6 &&
         this.passwordsMatch &&
         this.isPassportValid &&
+        this.isInsuranceValid &&
         !this.passportNumberError &&
         !this.insuranceNumberError
       )
@@ -310,11 +349,11 @@ export default {
   },
   methods: {
     validatePassportNumber() {
-      this.registerForm.passportSeries = this.registerForm.passportSeries.replace(/\D/g, '')
+      this.registerForm.passportNumber = this.registerForm.passportNumber.replace(/\D/g, '')
 
       if (
-        this.registerForm.passportSeries.length > 0 &&
-        this.registerForm.passportSeries.length < 10
+        this.registerForm.passportNumber.length > 0 &&
+        this.registerForm.passportNumber.length < 10
       ) {
         this.passportNumberError = 'Must be 10 digits'
       } else {
@@ -337,7 +376,9 @@ export default {
       console.log('Registering:', this.registerForm)
 
       if (
-        !this.registerForm.name ||
+        !this.registerForm.firstName ||
+        !this.registerForm.lastName ||
+        !this.registerForm.patronymic ||
         !this.registerForm.email ||
         !this.registerForm.phone ||
         !this.registerForm.password
@@ -374,6 +415,7 @@ export default {
       this.registerError = ''
       this.registerSuccess = 'Account created successfully! Now you can login...'
       alert('Account created successfully! Now you can login...')
+
       setTimeout(() => {
         this.$emit('navigate', 'login')
       }, 2000)
