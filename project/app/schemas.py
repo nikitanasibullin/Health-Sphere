@@ -185,3 +185,10 @@ class TokenData(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+
+
+class PatientContraindicationsRequest(BaseModel):
+    contradictions: List[str]
+
+class PatientContraindicationDeleteRequest(BaseModel):
+    contradiction: str

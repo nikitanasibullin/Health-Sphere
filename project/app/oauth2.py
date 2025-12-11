@@ -15,7 +15,6 @@ ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
 def create_access_token(data: dict):
-    """Создание JWT токена с дополнительными данными о роли"""
     to_encode = data.copy()
 
     expire = datetime.datetime.now(datetime.timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -111,7 +110,7 @@ def get_current_admin(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(database.get_db)
 ):
-    """Получение текущего врача (только для врачей)"""
+    """Пороверка на админа"""
     if current_user.user_type != 'admin':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
