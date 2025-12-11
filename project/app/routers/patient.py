@@ -147,9 +147,10 @@ def get_my_appointments(
         )
 
 
-@router.get("/appointments/all", response_model=List[schemas.AppointmentResponseToPatient])
+@router.get("/appointments", response_model=List[schemas.AppointmentResponseToPatient])
 def get_my_appointments(
     current_patient: models.Patient = Depends(oauth2.get_current_patient),
+    status_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -157,17 +158,20 @@ def get_my_appointments(
     """
     try:
         appointments = db.query(models.Appointment)\
-            .filter(models.Appointment.patient_id == current_patient.id)\
-            .order_by(models.Appointment.id.desc())\
-            .all()
-        
+            .filter(
+            models.Appointment.patient_id == current_patient.id
+            )
+        if status_filter:
+            appointments = appointments.filter(models.Appointment.status == status_filter)
+        appointments = appointments.order_by(models.Appointment.id.desc()).all()
         return appointments
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при получении записей: {str(e)}"
         )
+
 
 @router.post("/appointments/{schedule_id}", response_model=schemas.AppointmentResponseToPatient)
 def create_appointment(
