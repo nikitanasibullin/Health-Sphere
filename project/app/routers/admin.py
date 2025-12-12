@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
 
 router = APIRouter(
-    prefix = "/admin",
+    prefix = "/api/admin",
     tags=['admin']
 )
 

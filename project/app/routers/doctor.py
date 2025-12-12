@@ -9,7 +9,7 @@ from datetime import timedelta
 from datetime import date
 
 router = APIRouter(
-    prefix = "/doctor",
+    prefix = "/api/doctor",
     tags=['doctor']
 )
 
