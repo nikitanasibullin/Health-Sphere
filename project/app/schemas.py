@@ -1,17 +1,24 @@
-from pydantic import BaseModel,EmailStr, Field, field_validator
+from pydantic import BaseModel,EmailStr, Field, field_validator, constr
 from pydantic.types import Annotated
 from datetime import date, time, datetime
 from typing import Optional, List
 
+from enum import Enum
+
+class GenderEnum(str,Enum):
+    female="female"
+    male="male"
+
+
 class PatientCreate(BaseModel):
-    first_name: str
-    last_name: str
-    patronymic: str
-    gender: str
-    passport_number: str
-    insurance_number: str
+    first_name: Annotated[str,Field(min_length=1,max_length=50)]
+    last_name: Annotated[str,Field(min_length=1,max_length=50)]
+    patronymic: Annotated[str,Field(min_length=1,max_length=50)]
+    gender: GenderEnum
+    passport_number: Annotated[str,Field(pattern=r'^[0-9]{10,20}$')]
+    insurance_number: Annotated[str,Field(pattern=r'^[0-9]{10,35}$')]
     birth_date: date
-    phone_number: str
+    phone_number: Annotated[str,Field(pattern=r'^[0-9]{10,15}$')]
     email: EmailStr
     password: str
 
@@ -43,16 +50,16 @@ class DoctorResponse(BaseModel):
 
 
 class DoctorCreate(BaseModel):
-    first_name: str
-    last_name: str
-    patronymic: str
-    phone_number: str
+    first_name: Annotated[str,Field(min_length=1,max_length=50)]
+    last_name: Annotated[str,Field(min_length=1,max_length=50)]
+    patronymic: Annotated[str,Field(min_length=1,max_length=50)]
+    phone_number: Annotated[str,Field(pattern=r'^[0-9]{10,15}$')]
     email: EmailStr
     password: str
     specialization_id: int
 
 class SpecializationCreate(BaseModel):
-    name: str
+    name: Annotated[str,Field(min_length=3,max_length=50)]
     description: Optional[str] = None
 
 class ScheduleResponse(BaseModel):
@@ -64,7 +71,7 @@ class ScheduleResponse(BaseModel):
     doctor: DoctorResponse
 
 class ScheduleCreate(BaseModel):
-    office_number: str
+    office_number:Annotated[str,Field(min_length=1,max_length=10)]
     date : date
     start_time: time
     end_time: time
@@ -117,7 +124,7 @@ class AppointmentUpdate(BaseModel):
         return v
     
 class PatientMedicamentBase(BaseModel):
-    medicament_name: str
+    medicament_name: Annotated[str,constr(min_length=1,max_length=50)]
     dosage: Optional[str] = None
     frequency: Optional[str] = None
     start_date: Optional[date] = Field(default_factory=lambda: date.today())

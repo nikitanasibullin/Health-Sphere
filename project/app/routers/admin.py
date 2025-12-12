@@ -34,7 +34,7 @@ def create_specialization(
         
         # Создаем новую специализацию
         db_specialization = models.Specialization(
-            name=specialization.name,
+            name=specialization.name.capitalize(),
             description=specialization.description
         )
         
@@ -109,6 +109,24 @@ def register_doctor(
     
     # Хешируем пароль
     hashed_password = utils.hash(doctor_data.password)
+
+    first_name_normalized = (
+        doctor_data.first_name.capitalize() 
+        if doctor_data.first_name 
+        else None
+    )
+    
+    last_name_normalized = (
+        doctor_data.last_name.capitalize() 
+        if doctor_data.last_name 
+        else None
+    )
+    
+    patronymic_normalized = (
+        doctor_data.patronymic.capitalize() 
+        if doctor_data.patronymic 
+        else None
+    )
     
     # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
     db_user = models.User(
@@ -122,9 +140,9 @@ def register_doctor(
     
     # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
     db_doctor = models.Doctor(
-        first_name=doctor_data.first_name,
-        last_name=doctor_data.last_name,
-        patronymic=doctor_data.patronymic,
+        first_name=first_name_normalized,
+        last_name=last_name_normalized,
+        patronymic=patronymic_normalized,
         phone_number=doctor_data.phone_number,
         email=doctor_data.email,
         password=hashed_password,  # для совместимости
@@ -134,8 +152,6 @@ def register_doctor(
     
     db.add(db_doctor)
     db.flush()
-    
-    # 3. ОБНОВЛЯЕМ ПОЛЬЗОВАТЕЛЯ
     db_user.user_type_id = db_doctor.id
     
     db.commit()

@@ -23,8 +23,8 @@ def add_medicament_contradiction(
     Добавление противопоказаний для лекарства.
     """
     try:
-        medicament_name = request_data.medicament_name
-        contradictions = request_data.contradictions
+        medicament_name = request_data.medicament_name.capitalize()
+        contradictions = [name.capitalize() for name in request_data.contradictions]
         added_count = 0
         
         for contradiction in contradictions:
@@ -42,7 +42,7 @@ def add_medicament_contradiction(
             
             db_contradiction = models.Contradiction(
                 medicament_name=medicament_name,
-                contradiction=contradiction
+                contradiction=contradiction.capitalize()
             )
             
             db.add(db_contradiction)
@@ -121,8 +121,8 @@ def delete_medicament_contradiction(
     Удаление конкретного противопоказания для лекарства.
     """
     try:
-        medicament_name = request_data.medicament_name
-        contradiction = request_data.contradictions
+        medicament_name = request_data.medicament_name.capitalize()
+        contradiction = request_data.contradictions.capitalize()
         
         db_contradiction = db.query(models.Contradiction)\
             .filter(
@@ -232,6 +232,10 @@ def add_medicaments_for_appointment(
     Добавление лекарств пациенту на основе appointment ID.
     """
     try:
+
+        for medicament in medicaments_data.medicaments:
+            if medicament.medicament_name:
+                medicament.medicament_name = medicament.medicament_name.strip().capitalize()
         # Получаем запись на прием
         db_appointment = db.query(models.Appointment)\
             .filter(models.Appointment.id == appointment_id)\
@@ -306,7 +310,7 @@ def add_medicaments_for_appointment(
                 if patient_medicaments:
                     specific_contradictions = db.query(models.Contradiction)\
                         .filter(
-                            models.Contradiction.medicament_name.in_([pm.medicament_name for pm in patient_medicaments]),
+                            models.Contradiction.medicament_name.in_([pm.medicament_name.capitalize() for pm in patient_medicaments]),
                             models.Contradiction.contradiction == medicament_data.medicament_name
                         )\
                         .all()
@@ -323,7 +327,7 @@ def add_medicaments_for_appointment(
             # Если проверки прошли успешно - создаем запись
             db_medicament = models.PatientMedicament(
                 patient_id=db_appointment.patient_id,
-                medicament_name=medicament_data.medicament_name,
+                medicament_name=medicament_data.medicament_name.capitalize(),
                 dosage=medicament_data.dosage,
                 frequency=medicament_data.frequency,
                 start_date=medicament_data.start_date,
@@ -349,7 +353,7 @@ def add_medicaments_for_appointment(
             )
 
         # Обновляем информацию о назначении в записи приема
-        medicament_names = [m.medicament_name for m in added_medicaments]
+        medicament_names = [m.medicament_name.capitalize() for m in added_medicaments]
         info_text = f"Назначены лекарства: {', '.join(medicament_names)} (назначил: Dr. {current_doctor.last_name})"
 
         # Добавляем предупреждения о конфликтах, если они есть
@@ -641,7 +645,7 @@ def add_patient_contradictions(
                 detail=f"Пациент с ID {patient_id} не найден"
             )
         
-        contradictions = request_data.contradictions
+        contradictions = [name.capitalize() for name in request_data.contradictions]
         added_count = 0
         already_exist = []
         

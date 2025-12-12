@@ -45,6 +45,24 @@ def register_patient(
             detail="Пациент с такими данными уже существует"
         )
     
+    first_name_normalized = (
+        patient_data.first_name.capitalize() 
+        if patient_data.first_name 
+        else None
+    )
+    
+    last_name_normalized = (
+        patient_data.last_name.capitalize() 
+        if patient_data.last_name 
+        else None
+    )
+    
+    patronymic_normalized = (
+        patient_data.patronymic.capitalize() 
+        if patient_data.patronymic 
+        else None
+    )
+
     # Хешируем пароль
     hashed_password = utils.hash(patient_data.password)
     
@@ -60,9 +78,9 @@ def register_patient(
     
     # 2. СОЗДАЕМ ПРОФИЛЬ ПАЦИЕНТА
     db_patient = models.Patient(
-        first_name=patient_data.first_name,
-        last_name=patient_data.last_name,
-        patronymic=patient_data.patronymic,
+        first_name=first_name_normalized,
+        last_name=last_name_normalized,
+        patronymic=patronymic_normalized,
         gender=patient_data.gender,
         passport_number=patient_data.passport_number,
         insurance_number=patient_data.insurance_number,
