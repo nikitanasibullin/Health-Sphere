@@ -13,6 +13,8 @@ class User(Base):
     password = Column(String, nullable=False)
     user_type = Column(String, nullable=False)  # 'patient' или 'doctor'
 
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
+
 class Patient(Base):
     __tablename__= "patient"
     
@@ -31,7 +33,8 @@ class Patient(Base):
 
     created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
 
-    appointments = relationship("Appointment", back_populates="patient")
+    appointments = relationship("Appointment", back_populates="patient",
+        cascade="all, delete-orphan")
     medicaments = relationship("PatientMedicament", back_populates="patient", cascade="all, delete-orphan")
     contradictions = relationship("PatientContradiction", back_populates="patient", cascade="all, delete-orphan")
 
@@ -39,15 +42,15 @@ class Patient(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "first_name ~ '^[A-Z][a-z]+$'",
+            "first_name ~ '^[A-Z][a-z]*$'",
             name='check_first_name_format'
         ),
         CheckConstraint(
-            "last_name ~ '^[A-Z][a-z]+$'",
+            "last_name ~ '^[A-Z][a-z]*$'",
             name='check_last_name_format'
         ),
         CheckConstraint(
-            "patronymic ~ '^[A-Z][a-z]+$'",
+            "patronymic ~ '^[A-Z][a-z]*$'",
             name='check_patronymic_format'
         ),
         CheckConstraint(
@@ -92,21 +95,22 @@ class Doctor(Base):
     specialization_id = Column(Integer, ForeignKey('specialization.id'), nullable=False)
 
     specialization = relationship("Specialization", back_populates="doctors")
-    schedules = relationship("Schedule", back_populates="doctor")
+    schedules = relationship("Schedule", back_populates="doctor",
+        cascade="all, delete-orphan")
 
     user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=True)
 
     __table_args__ = (
         CheckConstraint(
-            "first_name ~ '^[A-Z][a-z]+$'",
+            "first_name ~ '^[A-Z][a-z]*$'",
             name='check_first_name_format'
         ),
         CheckConstraint(
-            "last_name ~ '^[A-Z][a-z]+$'",
+            "last_name ~ '^[A-Z][a-z]*$'",
             name='check_last_name_format'
         ),
         CheckConstraint(
-            "patronymic ~ '^[A-Z][a-z]+$'",
+            "patronymic ~ '^[A-Z][a-z]*$'",
             name='check_patronymic_format'
         ),
         CheckConstraint(
@@ -137,12 +141,15 @@ class Schedule(Base):
     
     doctor = relationship("Doctor", back_populates="schedules")
     
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
+
     __table_args__ = (
         CheckConstraint("end_time > start_time", name='check_valid_time_range'),
         CheckConstraint("date >= CURRENT_DATE", name='check_future_date'),
     )
 
-    appointment = relationship("Appointment", back_populates="schedule")
+    appointments = relationship("Appointment", back_populates="schedule",
+        cascade="all, delete-orphan")
 
 class Appointment(Base):
     __tablename__ = "appointment"
@@ -154,7 +161,9 @@ class Appointment(Base):
     information = Column(Text)
     
     patient = relationship("Patient", back_populates="appointments")
-    schedule = relationship("Schedule", back_populates="appointment")
+    schedule = relationship("Schedule", back_populates="appointments")
+
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
     
     __table_args__ = (
         CheckConstraint(
@@ -169,6 +178,8 @@ class Contradiction(Base):
     
     medicament_name = Column(String(50), primary_key=True, nullable=False)
     contradiction = Column(String(50), primary_key=True, nullable=False)
+
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
 
     
 class PatientMedicament(Base):
@@ -185,6 +196,8 @@ class PatientMedicament(Base):
     notes = Column(Text)
     
     patient = relationship("Patient", back_populates="medicaments")
+
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
     
     __table_args__ = (
         CheckConstraint("char_length(medicament_name) BETWEEN 1 AND 100", name='check_medicament_name_length'),
@@ -199,7 +212,6 @@ class PatientContradiction(Base):
     contradiction = Column(String(100), nullable=False)
     
     patient = relationship("Patient", back_populates="contradictions")
+
+    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
     
-    __table_args__ = (
-        CheckConstraint("char_length(contradiction) BETWEEN 1 AND 100", name='check_contradiction_name_length'),
-    )

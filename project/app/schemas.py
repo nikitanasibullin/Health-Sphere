@@ -40,6 +40,7 @@ class SpecializationResponse(BaseModel):
         from_attributes = True
 
 class DoctorResponse(BaseModel):
+    id: int
     first_name: str
     last_name: str
     patronymic: str

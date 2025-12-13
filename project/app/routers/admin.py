@@ -18,10 +18,12 @@ router = APIRouter(
              summary="Создать новую специализацию")
 def create_specialization(
     specialization: schemas.SpecializationCreate,
+    current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
 
     try:
+
         # Проверяем, существует ли уже такая специализация
         existing = db.query(models.Specialization)\
             .filter(models.Specialization.name.ilike(specialization.name))\
@@ -54,7 +56,7 @@ def create_specialization(
 @router.get("/patients",
             response_model=List[schemas.PatientResponse],
             summary="Получить всех пациентов ")
-def get_all_specializations(db: Session = Depends(get_db)):
+def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
 
     specializations = db.query(models.Patient).all()
     return specializations
@@ -62,7 +64,7 @@ def get_all_specializations(db: Session = Depends(get_db)):
 @router.get("/appointments",
             response_model=List[schemas.AppointmentResponse],
             summary="Получить все записи ")
-def get_all_specializations(db: Session = Depends(get_db)):
+def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     appointments = db.query(models.Appointment).all()
     return appointments
 
@@ -70,7 +72,7 @@ def get_all_specializations(db: Session = Depends(get_db)):
 @router.get("/specializations",
             response_model=List[schemas.SpecializationResponse],
             summary="Получить все специализации")
-def get_all_specializations(db: Session = Depends(get_db)):
+def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     """Получить список всех медицинских специализаций."""
     specializations = db.query(models.Specialization).all()
     return specializations
@@ -79,101 +81,111 @@ def get_all_specializations(db: Session = Depends(get_db)):
 @router.post("/doctor", response_model=schemas.Token)
 def register_doctor(
     doctor_data: schemas.DoctorCreate,
+    current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
     Регистрация врача с созданием пользователя и профиля
     """
     # Проверяем, существует ли пользователь с таким email
-    existing_user = db.query(models.User).filter(
-        models.User.email == doctor_data.email
-    ).first()
-    
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с таким email уже существует"
-        )
-    
-    # Проверяем уникальность данных врача
-    existing_doctor = db.query(models.Doctor).filter(
-        (models.Doctor.email == doctor_data.email) |
-        (models.Doctor.phone_number == doctor_data.phone_number)
-    ).first()
-    
-    if existing_doctor:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Врач с такими данными уже существует"
-        )
-    
-    # Хешируем пароль
-    hashed_password = utils.hash(doctor_data.password)
+    try:
+        existing_user = db.query(models.User).filter(
+            models.User.email == doctor_data.email
+        ).first()
+        
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пользователь с таким email уже существует"
+            )
+        
+        # Проверяем уникальность данных врача
+        existing_doctor = db.query(models.Doctor).filter(
+            (models.Doctor.email == doctor_data.email) |
+            (models.Doctor.phone_number == doctor_data.phone_number)
+        ).first()
+        
+        if existing_doctor:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Врач с такими данными уже существует"
+            )
+        
+        # Хешируем пароль
+        hashed_password = utils.hash(doctor_data.password)
 
-    first_name_normalized = (
-        doctor_data.first_name.capitalize() 
-        if doctor_data.first_name 
-        else None
-    )
-    
-    last_name_normalized = (
-        doctor_data.last_name.capitalize() 
-        if doctor_data.last_name 
-        else None
-    )
-    
-    patronymic_normalized = (
-        doctor_data.patronymic.capitalize() 
-        if doctor_data.patronymic 
-        else None
-    )
-    
-    # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
-    db_user = models.User(
-        email=doctor_data.email,
-        password=hashed_password,
-        user_type='doctor',
-    )
-    
-    db.add(db_user)
-    db.flush()
-    
-    # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
-    db_doctor = models.Doctor(
-        first_name=first_name_normalized,
-        last_name=last_name_normalized,
-        patronymic=patronymic_normalized,
-        phone_number=doctor_data.phone_number,
-        email=doctor_data.email,
-        password=hashed_password,  # для совместимости
-        specialization_id=doctor_data.specialization_id,
-        user_id=db_user.id  # связь с users
-    )
-    
-    db.add(db_doctor)
-    db.flush()
-    db_user.user_type_id = db_doctor.id
-    
-    db.commit()
-    
-    # Создаем токен
-    access_token = oauth2.create_access_token(
-        data={
-            "user_id": db_user.id,
-            "user_type": 'doctor'
+        first_name_normalized = (
+            doctor_data.first_name.capitalize() 
+            if doctor_data.first_name 
+            else None
+        )
+        
+        last_name_normalized = (
+            doctor_data.last_name.capitalize() 
+            if doctor_data.last_name 
+            else None
+        )
+        
+        patronymic_normalized = (
+            doctor_data.patronymic.capitalize() 
+            if doctor_data.patronymic 
+            else None
+        )
+        
+        # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
+        db_user = models.User(
+            email=doctor_data.email,
+            password=hashed_password,
+            user_type='doctor',
+        )
+        
+        db.add(db_user)
+        db.flush()
+        
+        # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
+        db_doctor = models.Doctor(
+            first_name=first_name_normalized,
+            last_name=last_name_normalized,
+            patronymic=patronymic_normalized,
+            phone_number=doctor_data.phone_number,
+            email=doctor_data.email,
+            password=hashed_password,  # для совместимости
+            specialization_id=doctor_data.specialization_id,
+            user_id=db_user.id  # связь с users
+        )
+        
+        db.add(db_doctor)
+        db.flush()
+        db_user.user_type_id = db_doctor.id
+        
+        db.commit()
+        
+        # Создаем токен
+        access_token = oauth2.create_access_token(
+            data={
+                "user_id": db_user.id,
+                "user_type": 'doctor'
+            }
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_type": "doctor"
         }
-    )
-    
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user_type": "doctor"
-    }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ошибка: {str(e)}"
+        )
     
 @router.post("/schedule", response_model=dict)
 def create_schedule(
     schedule: schemas.ScheduleCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(oauth2.get_current_admin)
 ):
 
     try:
@@ -202,6 +214,7 @@ def create_schedule(
             summary="Создать слоты равной длины")
 def create_schedule_batch(
     schedule: schemas.ScheduleBatchCreate,
+    current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
     """
@@ -328,49 +341,127 @@ def create_schedule_batch(
         db.rollback()
         raise HTTPException(500, f"Ошибка: {str(e)}")
     
+
+
+@router.delete("/doctor/{doctor_id}", 
+               status_code=status.HTTP_204_NO_CONTENT,
+               summary="Удалить врача по ID")
 def delete_doctor(
     doctor_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
-    doctor = db.query(models.Doctor)\
-        .filter(models.Doctor.id == doctor_id)\
-        .first()
-    
-    if not doctor:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Врач с ID {doctor_id} не найден"
-        )
-    
     try:
-        # appointments = db.query(models.Appointment)\
-        #     .filter(models.Appointment.doctor_id == doctor_id)\
-        #     .count()
-        # 
-        # if appointments > 0:
-        #     raise HTTPException(
-        #         status_code=status.HTTP_400_BAD_REQUEST,
-        #         detail="Нельзя удалить врача, у которого есть записи на прием"
-        #     )
+        # Находим врача и пользователя
+        doctor = db.query(models.Doctor)\
+            .filter(models.Doctor.id == doctor_id)\
+            .first()
         
+        if not doctor:
+            raise HTTPException(404, f"Врач с ID {doctor_id} не найден")
+        
+        user_id = doctor.user_id
+        
+        # 1. ОБНУЛЯЕМ user_id у врача
+        doctor.user_id = None
+        db.add(doctor)
+        db.flush()
+        
+        # 2. Удаляем расписания и записи
+        schedules = db.query(models.Schedule)\
+            .filter(models.Schedule.doctor_id == doctor_id)\
+            .all()
+        
+        for schedule in schedules:
+            db.query(models.Appointment)\
+                .filter(models.Appointment.schedule_id == schedule.id)\
+                .delete(synchronize_session=False)
+        
+        db.query(models.Schedule)\
+            .filter(models.Schedule.doctor_id == doctor_id)\
+            .delete(synchronize_session=False)
+        
+        # 3. Удаляем врача
         db.delete(doctor)
+        
+        # 4. КОММИТ первой транзакции
         db.commit()
         
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+        try:
+            db.query(models.User)\
+                .filter(models.User.id == user_id)\
+                .delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+    
+        return Response(status_code=204)
         
-    except IntegrityError as e:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Нельзя удалить врача: {str(e)}"
-        )
+        raise HTTPException(400, f"Ошибка при удалении: {str(e)}")
+
+
+@router.delete("/patient/{patient_id}", 
+               status_code=status.HTTP_204_NO_CONTENT,
+               summary="Удалить пациента по ID")
+def delete_patient(
+    patient_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Находим врача и пользователя
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(404, f"Пациент с ID {patient_id} не найден")
+        
+        user_id = patient.user_id
+        
+        # 1. ОБНУЛЯЕМ user_id у врача
+        patient.user_id = None
+        db.add(patient)
+        db.flush()
+        
+        
+        
+        db.query(models.Appointment)\
+            .filter(models.Appointment.patient_id == patient_id)\
+            .delete(synchronize_session=False)
+        
+        # 3. Удаляем врача
+        db.delete(patient)
+        
+        # 4. КОММИТ первой транзакции
+        db.commit()
+        
+        try:
+            db.query(models.User)\
+                .filter(models.User.id == user_id)\
+                .delete(synchronize_session=False)
+            db.commit()
+        finally:
+            db.close()
+    
+        return Response(status_code=204)
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400, f"Ошибка при удалении: {str(e)}")
+
+
+
 
 @router.get("/doctors/search/{search_term}",
             response_model=List[schemas.DoctorResponse],
             summary="Поиск врачей")
 def search_doctors(
     search_term: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(oauth2.get_current_admin)
 ):
     doctors = db.query(models.Doctor)\
         .filter(
@@ -383,4 +474,11 @@ def search_doctors(
         )\
         .all()
     
+    return doctors
+
+
+
+@router.get("/doctors",response_model=List[schemas.DoctorResponse])
+def get_doctors(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
+    doctors= db.query(models.Doctor).all()
     return doctors

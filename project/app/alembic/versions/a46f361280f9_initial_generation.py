@@ -1,8 +1,8 @@
-"""Initial revision
+"""initial generation
 
-Revision ID: 046997f33204
+Revision ID: a46f361280f9
 Revises: 
-Create Date: 2025-12-06 12:29:52.619185
+Create Date: 2025-12-13 17:17:57.419137
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '046997f33204'
+revision: str = 'a46f361280f9'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,6 +24,7 @@ def upgrade() -> None:
     op.create_table('contradiction',
     sa.Column('medicament_name', sa.String(length=50), nullable=False),
     sa.Column('contradiction', sa.String(length=50), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('medicament_name', 'contradiction')
     )
     op.create_table('specialization',
@@ -39,7 +40,7 @@ def upgrade() -> None:
     sa.Column('email', sa.String(), nullable=False),
     sa.Column('password', sa.String(), nullable=False),
     sa.Column('user_type', sa.String(), nullable=False),
-    sa.Column('user_type_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -56,9 +57,9 @@ def upgrade() -> None:
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint("email ~ '^[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'", name='check_email_format'),
-    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]+$'", name='check_first_name_format'),
-    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]+$'", name='check_last_name_format'),
-    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]+$'", name='check_patronymic_format'),
+    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]*$'", name='check_first_name_format'),
+    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]*$'", name='check_last_name_format'),
+    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]*$'", name='check_patronymic_format'),
     sa.CheckConstraint("phone_number ~ '^[0-9]+$'", name='check_phone_number_format'),
     sa.ForeignKeyConstraint(['specialization_id'], ['specialization.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
@@ -82,10 +83,10 @@ def upgrade() -> None:
     sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.CheckConstraint("email ~ '^[A-Za-z0-9._%%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'", name='check_email_format'),
-    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]+$'", name='check_first_name_format'),
+    sa.CheckConstraint("first_name ~ '^[A-Z][a-z]*$'", name='check_first_name_format'),
     sa.CheckConstraint("gender IN ('female','male')", name='check_gender_format'),
-    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]+$'", name='check_last_name_format'),
-    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]+$'", name='check_patronymic_format'),
+    sa.CheckConstraint("last_name ~ '^[A-Z][a-z]*$'", name='check_last_name_format'),
+    sa.CheckConstraint("patronymic ~ '^[A-Z][a-z]*$'", name='check_patronymic_format'),
     sa.CheckConstraint("phone_number ~ '^[0-9]+$'", name='check_phone_number_format'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id'),
@@ -99,7 +100,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('patient_id', sa.Integer(), nullable=False),
     sa.Column('contradiction', sa.String(length=100), nullable=False),
-    sa.CheckConstraint('char_length(contradiction) BETWEEN 1 AND 100', name='check_contradiction_name_length'),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['patient_id'], ['patient.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
@@ -113,6 +114,7 @@ def upgrade() -> None:
     sa.Column('end_date', sa.Date(), nullable=True),
     sa.Column('prescribed_by', sa.String(length=100), nullable=True),
     sa.Column('notes', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint('char_length(medicament_name) BETWEEN 1 AND 100', name='check_medicament_name_length'),
     sa.CheckConstraint('end_date IS NULL OR end_date >= start_date', name='check_valid_dates'),
     sa.ForeignKeyConstraint(['patient_id'], ['patient.id'], ondelete='CASCADE'),
@@ -126,6 +128,7 @@ def upgrade() -> None:
     sa.Column('start_time', sa.Time(), nullable=False),
     sa.Column('end_time', sa.Time(), nullable=False),
     sa.Column('is_available', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint('date >= CURRENT_DATE', name='check_future_date'),
     sa.CheckConstraint('end_time > start_time', name='check_valid_time_range'),
     sa.ForeignKeyConstraint(['doctor_id'], ['doctor.id'], ),
@@ -137,6 +140,7 @@ def upgrade() -> None:
     sa.Column('schedule_id', sa.Integer(), nullable=False),
     sa.Column('status', sa.String(length=50), nullable=False),
     sa.Column('information', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.CheckConstraint("status IN ('scheduled', 'completed', 'cancelled', 'no-show')", name='check_valid_status'),
     sa.ForeignKeyConstraint(['patient_id'], ['patient.id'], ),
     sa.ForeignKeyConstraint(['schedule_id'], ['schedule.id'], ),
