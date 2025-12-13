@@ -72,11 +72,11 @@
               <i class="fas fa-user-md text-white text-xl"></i>
             </div>
             <div>
-              <h4 class="font-bold text-gray-800">{{ getDoctorName(apt.doctorId) }}</h4>
+              <h4 class="font-bold text-gray-800">{{ getDoctorName(apt.doctor_id) }}</h4>
               <p class="text-sm text-gray-600">
-                <i class="fas fa-calendar mr-1"></i>{{ formatDate(apt.date) }} at {{ apt.time }}
+                <i class="fas fa-calendar mr-1"></i>{{ formatDate(apt.schedule?.date) }} at {{ apt.schedule?.time_slot }}
               </p>
-              <p class="text-sm text-gray-500">{{ apt.reason }}</p>
+              <p class="text-sm text-gray-500">{{ apt.reason || 'Scheduled appointment' }}</p>
             </div>
           </div>
           <button
@@ -159,6 +159,7 @@
 </template>
 
 <script>
+import { ref, onMounted } from 'vue'
 import { useHospitalData } from '../../composables/useHospitalData'
 
 export default {
@@ -181,12 +182,19 @@ export default {
       addActivity
     } = useHospitalData()
 
-    const myAppointments = getPatientAppointments(props.patientId)
-    const upcomingAppointments = getPatientUpcomingAppointments(props.patientId)
-    const completedAppointments = getPatientCompletedAppointments(props.patientId)
+    const myAppointments = ref([])
+    const upcomingAppointments = ref([])
+    const completedAppointments = ref([])
     const myPrescriptions = getPatientPrescriptions(props.patientId)
 
+    onMounted(async () => {
+      myAppointments.value = await getPatientAppointments() || []
+      upcomingAppointments.value = await getPatientUpcomingAppointments() || []
+      completedAppointments.value = await getPatientCompletedAppointments() || []
+    })
+
     const formatDate = (dateStr) => {
+      if (!dateStr) return ''
       const date = new Date(dateStr)
       return date.toLocaleDateString('en-US', {
         weekday: 'short',
@@ -195,10 +203,12 @@ export default {
       })
     }
 
-    const handleCancelAppointment = (appointmentId) => {
-      if (confirm('Are you sure you want to cancel this appointment?')) {
-        cancelAppointment(appointmentId)
+    const handleCancelAppointment = async (appointmentId) => {
+      if (confirm('Are you sure want to cancel this appointment?')) {
+        await cancelAppointment(appointmentId)
         addActivity('Appointment cancelled', 'fas fa-calendar-times', 'bg-red-500')
+        upcomingAppointments.value = await getPatientUpcomingAppointments() || []
+        myAppointments.value = await getPatientAppointments() || []
       }
     }
 

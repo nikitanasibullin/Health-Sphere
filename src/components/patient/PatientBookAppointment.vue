@@ -115,8 +115,10 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useHospitalData } from '../../composables/useHospitalData'
+
+
 
 export default {
   name: 'PatientBookAppointment',
@@ -127,6 +129,7 @@ export default {
     }
   },
   emits: ['appointment-booked'],
+
   setup(props, { emit }) {
     const { doctors, addAppointment, addActivity, getDoctorName } = useHospitalData()
 
@@ -207,6 +210,10 @@ export default {
       isSubmitting.value = false
       emit('appointment-booked')
     }
+    onMounted(async () => {
+      const {initializeData} = useHospitalData()
+      await initializeData()
+    })
 
     return {
       doctors,
