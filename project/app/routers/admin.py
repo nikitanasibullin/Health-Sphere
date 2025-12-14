@@ -478,7 +478,7 @@ def search_doctors(
 
 
 
-@router.get("/doctors",response_model=List[schemas.DoctorResponse])
+@router.get("/doctors",response_model=List[schemas.DoctorResponseAdmin])
 def get_doctors(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     doctors= db.query(models.Doctor).all()
     return doctors

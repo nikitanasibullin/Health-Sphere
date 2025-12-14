@@ -49,6 +49,19 @@ class DoctorResponse(BaseModel):
     class Config: 
         from_attributes = True
 
+class DoctorResponseAdmin(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    patronymic: str
+    email: str
+    phone_number: str
+    specialization: SpecializationResponse
+
+    class Config: 
+        from_attributes = True
+
+
 
 class DoctorCreate(BaseModel):
     first_name: Annotated[str,Field(min_length=1,max_length=50)]
