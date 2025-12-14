@@ -70,6 +70,7 @@ class ScheduleResponse(BaseModel):
     start_time: time
     end_time: time
     doctor: DoctorResponse
+    is_available: bool
 
 class ScheduleCreate(BaseModel):
     office_number:Annotated[str,Field(min_length=1,max_length=10)]
