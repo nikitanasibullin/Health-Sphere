@@ -6,6 +6,7 @@ from typing import Optional,List
 from sqlalchemy import func, and_
 from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
+import exceptions
 
 router = APIRouter(
     prefix = "/api/admin",
@@ -16,46 +17,39 @@ router = APIRouter(
              response_model=schemas.SpecializationCreate,
              status_code=status.HTTP_201_CREATED,
              summary="Создать новую специализацию")
+@exceptions.handle_exceptions(custom_message="Не удалось создать специализацию")
 def create_specialization(
     specialization: schemas.SpecializationCreate,
     current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
 
-    try:
 
-        # Проверяем, существует ли уже такая специализация
-        existing = db.query(models.Specialization)\
-            .filter(models.Specialization.name.ilike(specialization.name))\
-            .first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Специализация с таким названием уже существует"
-            )
-        
-        # Создаем новую специализацию
-        db_specialization = models.Specialization(
-            name=specialization.name.capitalize(),
-            description=specialization.description
-        )
-        
-        db.add(db_specialization)
-        db.commit()
-        
-        return db_specialization
-        
-    except IntegrityError:
-        db.rollback()
+    # Проверяем, существует ли уже такая специализация
+    existing = db.query(models.Specialization)\
+        .filter(models.Specialization.name.ilike(specialization.name))\
+        .first()
+    if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ошибка при создании специализации"
+            detail="Специализация с таким названием уже существует"
         )
-
+    
+    # Создаем новую специализацию
+    db_specialization = models.Specialization(
+        name=specialization.name.capitalize(),
+        description=specialization.description
+    )
+    
+    db.add(db_specialization)
+    db.commit()
+    
+    return db_specialization
 
 @router.get("/patients",
             response_model=List[schemas.PatientResponse],
             summary="Получить всех пациентов ")
+@exceptions.handle_exceptions(custom_message="Не удалось получить список всех пациентов")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
 
     specializations = db.query(models.Patient).all()
@@ -64,6 +58,7 @@ def get_all_specializations(db: Session = Depends(get_db),current_admin = Depend
 @router.get("/appointments",
             response_model=List[schemas.AppointmentResponse],
             summary="Получить все записи ")
+@exceptions.handle_exceptions(custom_message="Не удалось получить список всех записей")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     appointments = db.query(models.Appointment).all()
     return appointments
@@ -72,6 +67,7 @@ def get_all_specializations(db: Session = Depends(get_db),current_admin = Depend
 @router.get("/specializations",
             response_model=List[schemas.SpecializationResponse],
             summary="Получить все специализации")
+@exceptions.handle_exceptions(custom_message="Не удалось получить все специализации")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     """Получить список всех медицинских специализаций."""
     specializations = db.query(models.Specialization).all()
@@ -79,6 +75,7 @@ def get_all_specializations(db: Session = Depends(get_db),current_admin = Depend
 
 
 @router.post("/doctor", response_model=schemas.Token)
+@exceptions.handle_exceptions(custom_message="Не удалось создать врача")
 def register_doctor(
     doctor_data: schemas.DoctorCreate,
     current_admin = Depends(oauth2.get_current_admin),
@@ -88,130 +85,119 @@ def register_doctor(
     Регистрация врача с созданием пользователя и профиля
     """
     # Проверяем, существует ли пользователь с таким email
-    try:
-        existing_user = db.query(models.User).filter(
-            models.User.email == doctor_data.email
-        ).first()
-        
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Пользователь с таким email уже существует"
-            )
-        
-        # Проверяем уникальность данных врача
-        existing_doctor = db.query(models.Doctor).filter(
-            (models.Doctor.email == doctor_data.email) |
-            (models.Doctor.phone_number == doctor_data.phone_number)
-        ).first()
-        
-        if existing_doctor:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Врач с такими данными уже существует"
-            )
-        
-        # Хешируем пароль
-        hashed_password = utils.hash(doctor_data.password)
-
-        first_name_normalized = (
-            doctor_data.first_name.capitalize() 
-            if doctor_data.first_name 
-            else None
-        )
-        
-        last_name_normalized = (
-            doctor_data.last_name.capitalize() 
-            if doctor_data.last_name 
-            else None
-        )
-        
-        patronymic_normalized = (
-            doctor_data.patronymic.capitalize() 
-            if doctor_data.patronymic 
-            else None
-        )
-        
-        # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
-        db_user = models.User(
-            email=doctor_data.email,
-            password=hashed_password,
-            user_type='doctor',
-        )
-        
-        db.add(db_user)
-        db.flush()
-        
-        # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
-        db_doctor = models.Doctor(
-            first_name=first_name_normalized,
-            last_name=last_name_normalized,
-            patronymic=patronymic_normalized,
-            phone_number=doctor_data.phone_number,
-            email=doctor_data.email,
-            password=hashed_password,  # для совместимости
-            specialization_id=doctor_data.specialization_id,
-            user_id=db_user.id  # связь с users
-        )
-        
-        db.add(db_doctor)
-        db.flush()
-        db_user.user_type_id = db_doctor.id
-        
-        db.commit()
-        
-        # Создаем токен
-        access_token = oauth2.create_access_token(
-            data={
-                "user_id": db_user.id,
-                "user_type": 'doctor'
-            }
-        )
-        
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user_type": "doctor"
-        }
-
-    except Exception as e:
-        db.rollback()
+    existing_user = db.query(models.User).filter(
+        models.User.email == doctor_data.email
+    ).first()
+    
+    if existing_user:
         raise HTTPException(
-            status_code=400,
-            detail=f"Ошибка: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователь с таким email уже существует"
         )
     
+    # Проверяем уникальность данных врача
+    existing_doctor = db.query(models.Doctor).filter(
+        (models.Doctor.email == doctor_data.email) |
+        (models.Doctor.phone_number == doctor_data.phone_number)
+    ).first()
+    
+    if existing_doctor:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Врач с такими данными уже существует"
+        )
+    
+    # Хешируем пароль
+    hashed_password = utils.hash(doctor_data.password)
+
+    first_name_normalized = (
+        doctor_data.first_name.capitalize() 
+        if doctor_data.first_name 
+        else None
+    )
+    
+    last_name_normalized = (
+        doctor_data.last_name.capitalize() 
+        if doctor_data.last_name 
+        else None
+    )
+    
+    patronymic_normalized = (
+        doctor_data.patronymic.capitalize() 
+        if doctor_data.patronymic 
+        else None
+    )
+    
+    # 1. СОЗДАЕМ ПОЛЬЗОВАТЕЛЯ
+    db_user = models.User(
+        email=doctor_data.email,
+        password=hashed_password,
+        user_type='doctor',
+    )
+    
+    db.add(db_user)
+    db.flush()
+    
+    # 2. СОЗДАЕМ ПРОФИЛЬ ВРАЧА
+    db_doctor = models.Doctor(
+        first_name=first_name_normalized,
+        last_name=last_name_normalized,
+        patronymic=patronymic_normalized,
+        phone_number=doctor_data.phone_number,
+        email=doctor_data.email,
+        password=hashed_password,  # для совместимости
+        specialization_id=doctor_data.specialization_id,
+        user_id=db_user.id  # связь с users
+    )
+    
+    db.add(db_doctor)
+    db.flush()
+    db_user.user_type_id = db_doctor.id
+    
+    db.commit()
+    
+    # Создаем токен
+    access_token = oauth2.create_access_token(
+        data={
+            "user_id": db_user.id,
+            "user_type": 'doctor'
+        }
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_type": "doctor"
+    }
+
+    
 @router.post("/schedule", response_model=dict)
+@exceptions.handle_exceptions(custom_message="Не удалось создать расписание")
 def create_schedule(
     schedule: schemas.ScheduleCreate,
     db: Session = Depends(get_db),
     current_admin = Depends(oauth2.get_current_admin)
 ):
 
-    try:
-        # Просто создаем объект доктора
-        db_schedule = models.Schedule(**schedule.model_dump())
+    # Просто создаем объект доктора
+    db_schedule = models.Schedule(**schedule.model_dump())
+    
+    # Добавляем в базу
+    db.add(db_schedule)
+    db.commit()
+    
+    return {
+        "status": "success",
+        "doctor_id": db_schedule.id,
+        "message": f"Расписание создано"
+    }
         
-        # Добавляем в базу
-        db.add(db_schedule)
-        db.commit()
-        
-        return {
-            "status": "success",
-            "doctor_id": db_schedule.id,
-            "message": f"Расписание создано"
-        }
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Ошибка: {str(e)}"
-        )
+
     
 @router.post("/schedule/batch", 
             response_model=dict,
             summary="Создать слоты равной длины")
+@exceptions.handle_exceptions(custom_message="Не удалось создать расписание")
 def create_schedule_batch(
     schedule: schemas.ScheduleBatchCreate,
     current_admin = Depends(oauth2.get_current_admin),
@@ -230,227 +216,214 @@ def create_schedule_batch(
     }
     Создаст 4 слота по 1 часу: 9-10, 10-11, 11-12, 12-13
     """
-    try:
-        # Проверяем врача
-        doctor = db.query(models.Doctor)\
-            .filter(models.Doctor.id == schedule.doctor_id)\
+
+    # Проверяем врача
+    doctor = db.query(models.Doctor)\
+        .filter(models.Doctor.id == schedule.doctor_id)\
+        .first()
+    
+    if not doctor:
+        raise HTTPException(404, f"Врач с ID {schedule.doctor_id} не найден")
+    
+    # Проверяем время
+    if schedule.end_time <= schedule.start_time:
+        raise HTTPException(400, "Конечное время должно быть больше начального")
+    
+    if schedule.slots_count <= 0:
+        raise HTTPException(400, "Количество слотов должно быть больше 0")
+    
+    # Преобразуем время в секунды для расчетов
+    start_seconds = schedule.start_time.hour * 3600 + schedule.start_time.minute * 60
+    end_seconds = schedule.end_time.hour * 3600 + schedule.end_time.minute * 60
+    
+    # Общая длительность в секундах
+    total_duration = end_seconds - start_seconds
+    
+    # Длительность одного слота в секундах
+    slot_duration = total_duration // schedule.slots_count
+    
+    if slot_duration <= 0:
+        raise HTTPException(400, "Слишком много слотов для такого интервала")
+    
+    # Переводим секунды обратно в часы и минуты
+    slot_hours = slot_duration // 3600
+    slot_minutes = (slot_duration % 3600) // 60
+    
+    created_slots = []
+    
+    # Создаем слоты
+    current_seconds = start_seconds
+    
+    for i in range(schedule.slots_count):
+        # Вычисляем начало и конец слота
+        slot_start_seconds = current_seconds
+        slot_end_seconds = slot_start_seconds + slot_duration
+        
+        # Конвертируем секунды в time
+        from datetime import time as dt_time
+        
+        start_hour = slot_start_seconds // 3600
+        start_minute = (slot_start_seconds % 3600) // 60
+        
+        end_hour = slot_end_seconds // 3600
+        end_minute = (slot_end_seconds % 3600) // 60
+        
+        slot_start_time = dt_time(start_hour, start_minute)
+        slot_end_time = dt_time(end_hour, end_minute)
+        
+        # Проверяем пересечения
+        existing_slot = db.query(models.Schedule)\
+            .filter(
+                models.Schedule.doctor_id == schedule.doctor_id,
+                models.Schedule.date == schedule.date,
+                models.Schedule.start_time < slot_end_time,
+                models.Schedule.end_time > slot_start_time
+            )\
             .first()
         
-        if not doctor:
-            raise HTTPException(404, f"Врач с ID {schedule.doctor_id} не найден")
-        
-        # Проверяем время
-        if schedule.end_time <= schedule.start_time:
-            raise HTTPException(400, "Конечное время должно быть больше начального")
-        
-        if schedule.slots_count <= 0:
-            raise HTTPException(400, "Количество слотов должно быть больше 0")
-        
-        # Преобразуем время в секунды для расчетов
-        start_seconds = schedule.start_time.hour * 3600 + schedule.start_time.minute * 60
-        end_seconds = schedule.end_time.hour * 3600 + schedule.end_time.minute * 60
-        
-        # Общая длительность в секундах
-        total_duration = end_seconds - start_seconds
-        
-        # Длительность одного слота в секундах
-        slot_duration = total_duration // schedule.slots_count
-        
-        if slot_duration <= 0:
-            raise HTTPException(400, "Слишком много слотов для такого интервала")
-        
-        # Переводим секунды обратно в часы и минуты
-        slot_hours = slot_duration // 3600
-        slot_minutes = (slot_duration % 3600) // 60
-        
-        created_slots = []
-        
-        # Создаем слоты
-        current_seconds = start_seconds
-        
-        for i in range(schedule.slots_count):
-            # Вычисляем начало и конец слота
-            slot_start_seconds = current_seconds
-            slot_end_seconds = slot_start_seconds + slot_duration
-            
-            # Конвертируем секунды в time
-            from datetime import time as dt_time
-            
-            start_hour = slot_start_seconds // 3600
-            start_minute = (slot_start_seconds % 3600) // 60
-            
-            end_hour = slot_end_seconds // 3600
-            end_minute = (slot_end_seconds % 3600) // 60
-            
-            slot_start_time = dt_time(start_hour, start_minute)
-            slot_end_time = dt_time(end_hour, end_minute)
-            
-            # Проверяем пересечения
-            existing_slot = db.query(models.Schedule)\
-                .filter(
-                    models.Schedule.doctor_id == schedule.doctor_id,
-                    models.Schedule.date == schedule.date,
-                    models.Schedule.start_time < slot_end_time,
-                    models.Schedule.end_time > slot_start_time
-                )\
-                .first()
-            
-            if existing_slot:
-                raise HTTPException(
-                    400,
-                    f"Слот {i+1} пересекается с существующим: "
-                    f"{existing_slot.start_time} - {existing_slot.end_time}"
-                )
-            
-            # Создаем слот
-            db_slot = models.Schedule(
-                doctor_id=schedule.doctor_id,
-                office_number=schedule.office_number,
-                date=schedule.date,
-                start_time=slot_start_time,
-                end_time=slot_end_time,
-                is_available=True
+        if existing_slot:
+            raise HTTPException(
+                400,
+                f"Слот {i+1} пересекается с существующим: "
+                f"{existing_slot.start_time} - {existing_slot.end_time}"
             )
-            
-            db.add(db_slot)
-            created_slots.append({
-                'slot': i + 1,
-                'start': slot_start_time.isoformat()[:5],  # HH:MM
-                'end': slot_end_time.isoformat()[:5]
-            })
-            
-            # Переходим к следующему слоту
-            current_seconds = slot_end_seconds
         
-        db.commit()
+        # Создаем слот
+        db_slot = models.Schedule(
+            doctor_id=schedule.doctor_id,
+            office_number=schedule.office_number,
+            date=schedule.date,
+            start_time=slot_start_time,
+            end_time=slot_end_time,
+            is_available=True
+        )
         
-        return {
-            "status": "success",
-            "doctor_id": schedule.doctor_id,
-            "date": schedule.date.isoformat(),
-            "total_slots": len(created_slots),
-            "slot_duration_minutes": slot_duration // 60,
-            "slots": created_slots,
-            "message": f"Создано {len(created_slots)} слотов по {slot_duration//60} минут"
-        }
+        db.add(db_slot)
+        created_slots.append({
+            'slot': i + 1,
+            'start': slot_start_time.isoformat()[:5],  # HH:MM
+            'end': slot_end_time.isoformat()[:5]
+        })
         
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(500, f"Ошибка: {str(e)}")
+        # Переходим к следующему слоту
+        current_seconds = slot_end_seconds
     
+    db.commit()
+    
+    return {
+        "status": "success",
+        "doctor_id": schedule.doctor_id,
+        "date": schedule.date.isoformat(),
+        "total_slots": len(created_slots),
+        "slot_duration_minutes": slot_duration // 60,
+        "slots": created_slots,
+        "message": f"Создано {len(created_slots)} слотов по {slot_duration//60} минут"
+    }
+
 
 
 @router.delete("/doctor/{doctor_id}", 
                status_code=status.HTTP_204_NO_CONTENT,
                summary="Удалить врача по ID")
+@exceptions.handle_exceptions(custom_message="Не удалось удалить доктора")
 def delete_doctor(
     doctor_id: int,
     current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
-):
-    try:
-        # Находим врача и пользователя
-        doctor = db.query(models.Doctor)\
-            .filter(models.Doctor.id == doctor_id)\
-            .first()
-        
-        if not doctor:
-            raise HTTPException(404, f"Врач с ID {doctor_id} не найден")
-        
-        user_id = doctor.user_id
-        
-        # 1. ОБНУЛЯЕМ user_id у врача
-        doctor.user_id = None
-        db.add(doctor)
-        db.flush()
-        
-        # 2. Удаляем расписания и записи
-        schedules = db.query(models.Schedule)\
-            .filter(models.Schedule.doctor_id == doctor_id)\
-            .all()
-        
-        for schedule in schedules:
-            db.query(models.Appointment)\
-                .filter(models.Appointment.schedule_id == schedule.id)\
-                .delete(synchronize_session=False)
-        
-        db.query(models.Schedule)\
-            .filter(models.Schedule.doctor_id == doctor_id)\
-            .delete(synchronize_session=False)
-        
-        # 3. Удаляем врача
-        db.delete(doctor)
-        
-        # 4. КОММИТ первой транзакции
-        db.commit()
-        
-        try:
-            db.query(models.User)\
-                .filter(models.User.id == user_id)\
-                .delete(synchronize_session=False)
-            db.commit()
-        finally:
-            db.close()
     
-        return Response(status_code=204)
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(400, f"Ошибка при удалении: {str(e)}")
+):
+    # Находим врача и пользователя
+    doctor = db.query(models.Doctor)\
+        .filter(models.Doctor.id == doctor_id)\
+        .first()
+    
+    if not doctor:
+        raise HTTPException(404, f"Врач с ID {doctor_id} не найден")
+    
+    user_id = doctor.user_id
+    
+    # 1. ОБНУЛЯЕМ user_id у врача
+    doctor.user_id = None
+    db.add(doctor)
+    db.flush()
+    
+    # 2. Удаляем расписания и записи
+    schedules = db.query(models.Schedule)\
+        .filter(models.Schedule.doctor_id == doctor_id)\
+        .all()
+    
+    for schedule in schedules:
+        db.query(models.Appointment)\
+            .filter(models.Appointment.schedule_id == schedule.id)\
+            .delete(synchronize_session=False)
+    
+    db.query(models.Schedule)\
+        .filter(models.Schedule.doctor_id == doctor_id)\
+        .delete(synchronize_session=False)
+    
+    # 3. Удаляем врача
+    db.delete(doctor)
+    
+    # 4. КОММИТ первой транзакции
+    db.commit()
+    
+    try:
+        db.query(models.User)\
+            .filter(models.User.id == user_id)\
+            .delete(synchronize_session=False)
+        db.commit()
+    finally:
+        db.close()
+
+    return Response(status_code=204)
+
 
 
 @router.delete("/patient/{patient_id}", 
                status_code=status.HTTP_204_NO_CONTENT,
                summary="Удалить пациента по ID")
+@exceptions.handle_exceptions(custom_message="Не удалось удалить пациента")
 def delete_patient(
     patient_id: int,
     current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
-    try:
-        # Находим врача и пользователя
-        patient = db.query(models.Patient)\
-            .filter(models.Patient.id == patient_id)\
-            .first()
-        
-        if not patient:
-            raise HTTPException(404, f"Пациент с ID {patient_id} не найден")
-        
-        user_id = patient.user_id
-        
-        # 1. ОБНУЛЯЕМ user_id у врача
-        patient.user_id = None
-        db.add(patient)
-        db.flush()
-        
-        
-        
-        db.query(models.Appointment)\
-            .filter(models.Appointment.patient_id == patient_id)\
-            .delete(synchronize_session=False)
-        
-        # 3. Удаляем врача
-        db.delete(patient)
-        
-        # 4. КОММИТ первой транзакции
-        db.commit()
-        
-        try:
-            db.query(models.User)\
-                .filter(models.User.id == user_id)\
-                .delete(synchronize_session=False)
-            db.commit()
-        finally:
-            db.close()
+    # Находим врача и пользователя
+    patient = db.query(models.Patient)\
+        .filter(models.Patient.id == patient_id)\
+        .first()
     
-        return Response(status_code=204)
-        
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(400, f"Ошибка при удалении: {str(e)}")
+    if not patient:
+        raise HTTPException(404, f"Пациент с ID {patient_id} не найден")
+    
+    user_id = patient.user_id
+    
+    # 1. ОБНУЛЯЕМ user_id у врача
+    patient.user_id = None
+    db.add(patient)
+    db.flush()
+    
+    
+    
+    db.query(models.Appointment)\
+        .filter(models.Appointment.patient_id == patient_id)\
+        .delete(synchronize_session=False)
+    
+    # 3. Удаляем врача
+    db.delete(patient)
+    
+    # 4. КОММИТ первой транзакции
+    db.commit()
+    
+    try:
+        db.query(models.User)\
+            .filter(models.User.id == user_id)\
+            .delete(synchronize_session=False)
+        db.commit()
+    finally:
+        db.close()
+
+    return Response(status_code=204)
 
 
 
@@ -458,6 +431,7 @@ def delete_patient(
 @router.get("/doctors/search/{search_term}",
             response_model=List[schemas.DoctorResponse],
             summary="Поиск врачей")
+@exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
 def search_doctors(
     search_term: str,
     db: Session = Depends(get_db),
@@ -479,12 +453,14 @@ def search_doctors(
 
 
 @router.get("/doctors",response_model=List[schemas.DoctorResponseAdmin])
+@exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
 def get_doctors(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     doctors= db.query(models.Doctor).all()
     return doctors
 
 
 @router.get("/schedule/{doctor_id}",response_model=List[schemas.ScheduleResponse])
+@exceptions.handle_exceptions(custom_message="Не удалось получить расписание доктора")
 def get_doctors_schedule(doctor_id: int,current_admin = Depends(oauth2.get_current_admin), 
                          db: Session = Depends(get_db)):
     doctor = db.query(models.Doctor).filter(models.Doctor.id == doctor_id).first()
