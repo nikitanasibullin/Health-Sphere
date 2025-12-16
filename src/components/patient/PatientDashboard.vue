@@ -72,7 +72,7 @@
               <i class="fas fa-user-md text-white text-xl"></i>
             </div>
             <div>
-              <h4 class="font-bold text-gray-800">{{ getDoctorName(apt.doctor_id) }}</h4>
+              <h4 class="font-bold text-gray-800">{{ getDoctorName(apt.schedule.doctor.id) }}</h4>
               <p class="text-sm text-gray-600">
                 <i class="fas fa-calendar mr-1"></i>{{ formatDate(apt.schedule?.date) }} at {{ apt.schedule?.time_slot }}
               </p>
@@ -160,7 +160,7 @@
 
 <script>
 import { ref, onMounted } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientDashboard',
@@ -173,6 +173,7 @@ export default {
   emits: ['navigate-to'],
   setup(props) {
     const {
+      initializeData,
       getDoctorName,
       getPatientAppointments,
       getPatientUpcomingAppointments,
@@ -180,7 +181,7 @@ export default {
       getPatientPrescriptions,
       cancelAppointment,
       addActivity
-    } = useHospitalData()
+    } = usePatientData()
 
     const myAppointments = ref([])
     const upcomingAppointments = ref([])
@@ -211,7 +212,9 @@ export default {
         myAppointments.value = await getPatientAppointments() || []
       }
     }
-
+    onMounted(async () => {
+      await initializeData()
+    })
     return {
       myAppointments,
       upcomingAppointments,

@@ -18,7 +18,7 @@
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           ]"
         >
-          {{ filter.label }} ({{ getFilterCount(filter.value) }})
+          {{ filter.label }}
         </button>
       </div>
 
@@ -72,7 +72,7 @@
 
 <script>
 import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientAppointments',
@@ -89,7 +89,7 @@ export default {
       getPatientAppointments,
       cancelAppointment,
       addActivity
-    } = useHospitalData()
+    } = usePatientData()
 
     const myAppointments = getPatientAppointments(props.patientId)
     const activeFilter = ref('all')
@@ -102,6 +102,9 @@ export default {
     ]
 
     const filteredAppointments = computed(() => {
+      if (!myAppointments.value) {
+        return []
+      }
       if (activeFilter.value === 'all') {
         return [...myAppointments.value].sort((a, b) => new Date(b.date) - new Date(a.date))
       }
@@ -111,6 +114,7 @@ export default {
     })
 
     const getFilterCount = (filterValue) => {
+      if (!myAppointments.value) return 0
       if (filterValue === 'all') return myAppointments.value.length
       return myAppointments.value.filter(a => a.status === filterValue).length
     }

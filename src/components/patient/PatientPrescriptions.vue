@@ -202,7 +202,7 @@
 
 <script>
 import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientPrescriptions',
@@ -213,7 +213,7 @@ export default {
     }
   },
   setup(props) {
-    const { getDoctorName, getPatientPrescriptions, addActivity } = useHospitalData()
+    const { getDoctorName, getPatientPrescriptions, addActivity } = usePatientData()
 
     const prescriptions = getPatientPrescriptions(props.patientId)
 
@@ -246,7 +246,7 @@ export default {
     }
 
     const isActive = (prescription) => {
-      // Simple check - if prescribed within last 90 days, consider active
+      // if prescribed within last 90 days, consider active
       const prescriptionDate = new Date(prescription.date)
       const today = new Date()
       const diffDays = Math.floor((today - prescriptionDate) / (1000 * 60 * 60 * 24))

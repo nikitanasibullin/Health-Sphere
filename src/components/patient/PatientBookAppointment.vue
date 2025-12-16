@@ -9,12 +9,13 @@
         <!-- Select Doctor -->
         <div class="mb-6">
           <label class="block text-gray-700 font-semibold mb-3">Select Doctor</label>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               v-for="doctor in doctors"
               :key="doctor.id"
               type="button"
-              @click="form.doctorId = doctor.id"
+              @click="selectDoctor(doctor.id)"
               :class="[
                 'p-4 border-2 rounded-xl transition text-left',
                 form.doctorId === doctor.id
@@ -44,13 +45,32 @@
             <label class="block text-gray-700 font-semibold mb-2">
               <i class="fas fa-calendar mr-2 text-blue-500"></i>Date
             </label>
-            <input
+
+
+            <!-- No doctor selected -->
+            <div v-if="!form.doctorId" class="text-gray-500 text-sm py-3">
+              Please select a doctor first
+            </div>
+
+            <!-- No available dates -->
+            <div v-if="availableDates.length === 0" class="text-yellow-600 text-sm py-3">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              No available dates for this doctor
+            </div>
+
+            <!-- Date select -->
+            <select
+              v-else
               v-model="form.date"
-              type="date"
-              :min="minDate"
               required
+              @change="onDateChange"
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
+              <option value="">Select date...</option>
+              <option v-for="date in availableDates" :key="date" :value="date">
+                {{ formatDate(date) }} ({{ getSlotsCountForDate(date) }} slots)
+              </option>
+            </select>
             <p v-if="errors.date" class="text-red-500 text-sm mt-2">
               <i class="fas fa-exclamation-circle mr-1"></i>{{ errors.date }}
             </p>
@@ -60,13 +80,29 @@
             <label class="block text-gray-700 font-semibold mb-2">
               <i class="fas fa-clock mr-2 text-blue-500"></i>Time
             </label>
+
+            <!-- No date selected -->
+            <div v-if="!form.date" class="text-gray-500 text-sm py-3">
+              Please select a date first
+            </div>
+
+            <!-- No available slots -->
+            <div v-else-if="availableTimeSlots.length === 0" class="text-yellow-600 text-sm py-3">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              No available time slots
+            </div>
+
+            <!-- Time select -->
             <select
-              v-model="form.time"
+              v-else
+              v-model="selectedSlot"
               required
               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select time...</option>
-              <option v-for="slot in timeSlots" :key="slot" :value="slot">{{ slot }}</option>
+              <option :value="null">Select time...</option>
+              <option v-for="slot in availableTimeSlots" :key="slot.id" :value="slot">
+                {{ formatTime(slot.start_time) }} - {{ formatTime(slot.end_time) }} (Office: {{ slot.office_number }})
+              </option>
             </select>
             <p v-if="errors.time" class="text-red-500 text-sm mt-2">
               <i class="fas fa-exclamation-circle mr-1"></i>{{ errors.time }}
@@ -91,10 +127,23 @@
           </p>
         </div>
 
+        <!-- Selected Appointment Summary -->
+        <div v-if="selectedSlot" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 class="font-semibold text-gray-800 mb-2">
+            <i class="fas fa-clipboard-check mr-2 text-blue-500"></i>Appointment Summary
+          </h4>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div><span class="text-gray-600">Date:</span> {{ formatDate(form.date) }}</div>
+            <div><span class="text-gray-600">Time:</span> {{ formatTime(selectedSlot.start_time) }}</div>
+            <div><span class="text-gray-600">Office:</span> {{ selectedSlot.office_number }}</div>
+            <div><span class="text-gray-600">Doctor:</span> {{ getSelectedDoctorName() }}</div>
+          </div>
+        </div>
+
         <!-- Submit Button -->
         <button
           type="submit"
-          :disabled="isSubmitting"
+          :disabled="isSubmitting || !selectedSlot"
           class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-semibold text-lg shadow-lg disabled:opacity-50"
         >
           <i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i>
@@ -110,50 +159,141 @@
       >
         <i class="fas fa-check-circle mr-2"></i>{{ successMessage }}
       </div>
+
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg animate-fadeIn"
+      >
+        <i class="fas fa-exclamation-circle mr-2"></i>{{ errorMessage }}
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
-
-
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientBookAppointment',
   props: {
     patientId: {
       type: Number,
-      required: true
+      required: false
     }
   },
   emits: ['appointment-booked'],
 
   setup(props, { emit }) {
-    const { doctors, addAppointment, addActivity, getDoctorName } = useHospitalData()
+    const {
+      doctors,
+      addAppointment,
+      fetchDoctors,
+      fetchDoctorSchedule
+    } = usePatientData()
 
     const form = ref({
       doctorId: null,
       date: '',
-      time: '',
       reason: ''
     })
+
+    // Schedule data
+    const doctorSchedules = ref([])
+    const selectedSlot = ref(null)
 
     const errors = ref({})
     const isSubmitting = ref(false)
     const successMessage = ref('')
+    const errorMessage = ref('')
 
-    // Minimum date is today
-    const minDate = computed(() => {
-      return new Date().toISOString().split('T')[0]
+    // only future dates with is_available=true
+    const availableDates = computed(() => {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const dates = [...new Set(
+        doctorSchedules.value
+          .filter(s => {
+            const scheduleDate = new Date(s.date)
+            scheduleDate.setHours(0, 0, 0, 0)
+            return s.is_available && scheduleDate >= today
+          })
+          .map(s => s.date)
+      )]
+
+      return dates.sort((a, b) => new Date(a) - new Date(b))
     })
 
-    // Available time slots
-    const timeSlots = [
-      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-      '14:00', '14:30', '15:00', '15:30', '16:00', '16:30'
-    ]
+    // Get available time slots for selected date (is_available=true)
+    const availableTimeSlots = computed(() => {
+      if (!form.value.date) return []
+
+      return doctorSchedules.value
+        .filter(s => s.date === form.value.date && s.is_available)
+        .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    })
+
+    // Get slots count for a date
+    const getSlotsCountForDate = (date) => {
+      return doctorSchedules.value.filter(s => s.date === date && s.is_available).length
+    }
+
+    // Select doctor and fetch schedules
+    const selectDoctor = async (doctorId) => {
+      form.value.doctorId = doctorId
+      form.value.date = ''
+      selectedSlot.value = null
+      errorMessage.value = ''
+      try {
+        const schedules = await fetchDoctorSchedule(doctorId)
+        doctorSchedules.value = schedules
+      } catch (error) {
+        console.error('Failed to fetch schedules:', error)
+        doctorSchedules.value = []
+      }
+    }
+
+    // Reset time when date changes
+    const onDateChange = () => {
+      selectedSlot.value = null
+    }
+
+    // Format date for display
+    const formatDate = (dateString) => {
+      const date = new Date(dateString)
+      return date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    }
+
+    // Format time from ISO string (e.g., "19:58:31.534Z" or "09:00:00")
+    const formatTime = (timeString) => {
+      if (!timeString) return ''
+
+      if (timeString.includes('T') || timeString.includes('Z')) {
+        const date = new Date(timeString)
+        return date.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        })
+      }
+
+      // Format: HH:MM
+      const parts = timeString.split(':')
+      return `${parts[0]}:${parts[1]}`
+    }
+
+    // Get selected doctor name
+    const getSelectedDoctorName = () => {
+      const doctor = doctors.value?.find(d => d.id === form.value.doctorId)
+      return doctor ? doctor.name : ''
+    }
 
     const validate = () => {
       errors.value = {}
@@ -164,7 +304,7 @@ export default {
       if (!form.value.date) {
         errors.value.date = 'Please select a date'
       }
-      if (!form.value.time) {
+      if (!selectedSlot.value) {
         errors.value.time = 'Please select a time'
       }
       if (!form.value.reason || form.value.reason.trim().length < 10) {
@@ -179,40 +319,33 @@ export default {
 
       isSubmitting.value = true
       successMessage.value = ''
+      errorMessage.value = ''
 
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      try {
+        // Book using the schedule ID
+        await addAppointment(selectedSlot.value.id)
 
-      addAppointment({
-        patientId: props.patientId,
-        doctorId: form.value.doctorId,
-        date: form.value.date,
-        time: form.value.time,
-        reason: form.value.reason
-      })
+        successMessage.value = 'Appointment booked successfully! You will receive a confirmation shortly.'
 
-      addActivity(
-        `Appointment booked with ${getDoctorName(form.value.doctorId)}`,
-        'fas fa-calendar-plus',
-        'bg-blue-500'
-      )
+        // Reset form
+        form.value = {
+          doctorId: null,
+          date: '',
+          reason: ''
+        }
+        selectedSlot.value = null
+        doctorSchedules.value = []
 
-      successMessage.value = 'Appointment booked successfully! You will receive a confirmation shortly.'
-
-      // Reset form
-      form.value = {
-        doctorId: null,
-        date: '',
-        time: '',
-        reason: ''
+        emit('appointment-booked')
+      } catch (error) {
+        errorMessage.value = error.message || 'Failed to book appointment. Please try again.'
+      } finally {
+        isSubmitting.value = false
       }
-
-      isSubmitting.value = false
-      emit('appointment-booked')
     }
+
     onMounted(async () => {
-      const {initializeData} = useHospitalData()
-      await initializeData()
+      await fetchDoctors()
     })
 
     return {
@@ -221,8 +354,16 @@ export default {
       errors,
       isSubmitting,
       successMessage,
-      minDate,
-      timeSlots,
+      errorMessage,
+      availableDates,
+      availableTimeSlots,
+      selectedSlot,
+      selectDoctor,
+      onDateChange,
+      formatDate,
+      formatTime,
+      getSlotsCountForDate,
+      getSelectedDoctorName,
       handleBookAppointment
     }
   }
