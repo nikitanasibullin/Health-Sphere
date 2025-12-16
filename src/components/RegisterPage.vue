@@ -169,9 +169,9 @@
                 placeholder="Number (16 digits)"
                 @input="validateInsuranceNumber"
                 :class="[
-                    'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200',
-                    insuranceNumberError ? 'border-red-400 bg-red-50' : 'border-gray-300',
-                  ]"
+                  'w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition duration-200',
+                  insuranceNumberError ? 'border-red-400 bg-red-50' : 'border-gray-300',
+                ]"
               />
               <p v-if="insuranceNumberError" class="text-red-500 text-xs mt-1">
                 {{ insuranceNumberError }}
@@ -179,7 +179,6 @@
             </div>
           </div>
         </div>
-
 
         <!-- Password -->
         <div class="mb-4">
@@ -266,8 +265,7 @@
 </template>
 
 <script>
-import http from 'http'
-
+import http from './http.js'
 export default {
   name: 'RegisterPage',
   emits: ['navigate'],
@@ -372,7 +370,7 @@ export default {
         this.insuranceNumberError = ''
       }
     },
-    register() {
+    async register() {
       console.log('Registering:', this.registerForm)
 
       if (
@@ -413,16 +411,34 @@ export default {
       }
 
       this.registerError = ''
-      this.registerSuccess = 'Account created successfully! Now you can login...'
-      alert('Account created successfully! Now you can login...')
 
-      setTimeout(() => {
-        this.$emit('navigate', 'login')
-      }, 2000)
-    },
-    goToLogin() {
-      this.$emit('navigate', 'login')
-    },
-  },
+      const dataToSend = {
+        first_name: this.registerForm.firstName,
+        last_name: this.registerForm.lastName,
+        patronymic: this.registerForm.patronymic,
+        gender: this.registerForm.gender,
+        passport_number: this.registerForm.passportNumber,
+        insurance_number: this.registerForm.insuranceNumber,
+        birth_date: this.registerForm.birthDate,
+        phone_number: this.registerForm.phone,
+        email: this.registerForm.email,
+        password: this.registerForm.password,
+      }
+
+      try {
+        const response = await http.post('/api/patient/register', JSON.stringify(dataToSend))
+
+        if (response.status === 200 || response.status === 201) {
+          this.registerError = ''
+          this.registerSuccess = 'Account created successfully! Now you can login...'
+          alert('Account created successfully!')
+        }
+      } catch (error) {
+        this.registerError = 'Something went wrong'
+        this.registerSuccess = ''
+        console.error(error)
+      }
+    }
+  }
 }
 </script>

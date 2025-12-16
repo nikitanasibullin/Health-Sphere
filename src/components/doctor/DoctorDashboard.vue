@@ -1,7 +1,7 @@
 <template>
   <div class="animate-fadeIn">
     <h2 class="text-3xl font-bold text-gray-800 mb-6">Doctor Dashboard</h2>
-    
+
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <!-- My Appointments -->
@@ -16,7 +16,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Today's Appointments -->
       <div class="bg-gradient-to-br from-green-500 to-green-700 p-6 rounded-2xl shadow-lg text-white card-hover">
         <div class="flex items-center justify-between">
@@ -29,7 +29,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Total Patients -->
       <div class="bg-gradient-to-br from-purple-500 to-purple-700 p-6 rounded-2xl shadow-lg text-white card-hover">
         <div class="flex items-center justify-between">
@@ -43,22 +43,22 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Today's Schedule -->
     <div class="bg-white rounded-2xl shadow-lg p-6">
       <h3 class="text-2xl font-bold text-gray-800 mb-4">
         <i class="fas fa-calendar-day text-blue-500 mr-2"></i>Today's Schedule
       </h3>
-      
+
       <div v-if="todaysAppointments.length === 0" class="text-center py-8 text-gray-500">
         <i class="fas fa-calendar-check text-4xl mb-4"></i>
         <p>No appointments scheduled for today</p>
       </div>
-      
+
       <div v-else class="space-y-3">
-        <div 
-          v-for="apt in todaysAppointments" 
-          :key="apt.id" 
+        <div
+          v-for="apt in todaysAppointments"
+          :key="apt.id"
           class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg hover:shadow-md transition"
         >
           <div class="flex items-center">
@@ -66,9 +66,9 @@
               <i class="fas fa-user text-white text-xl"></i>
             </div>
             <div>
-              <h4 class="font-bold text-gray-800">{{ getPatientName(apt.patientId) }}</h4>
+              <h4 class="font-bold text-gray-800">{{ getPatientName(apt.patient_id) }}</h4>
               <p class="text-sm text-gray-600">
-                <i class="fas fa-clock mr-1"></i>{{ apt.time }} - {{ apt.reason || 'Consultation' }}
+                <i class="fas fa-clock mr-1"></i>{{ apt.schedule?.time_slot }} - {{ apt.reason || 'Consultation' }}
               </p>
             </div>
           </div>
@@ -76,7 +76,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Quick Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
       <!-- Upcoming Appointments -->
@@ -85,14 +85,14 @@
           <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>Upcoming Appointments
         </h3>
         <div class="space-y-3">
-          <div 
-            v-for="apt in upcomingAppointments.slice(0, 5)" 
+          <div
+            v-for="apt in upcomingAppointments.slice(0, 5)"
             :key="apt.id"
             class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
           >
             <div>
-              <p class="font-semibold text-gray-800">{{ getPatientName(apt.patientId) }}</p>
-              <p class="text-sm text-gray-500">{{ apt.date }} at {{ apt.time }}</p>
+              <p class="font-semibold text-gray-800">{{ getPatientName(apt.patient_id) }}</p>
+              <p class="text-sm text-gray-500">{{ apt.schedule?.date }} at {{ apt.schedule?.time_slot }}</p>
             </div>
             <span :class="getStatusClass(apt.status)">{{ apt.status }}</span>
           </div>
@@ -101,20 +101,20 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Recent Prescriptions -->
       <div class="bg-white rounded-2xl shadow-lg p-6">
         <h3 class="text-xl font-bold text-gray-800 mb-4">
           <i class="fas fa-prescription text-green-500 mr-2"></i>Recent Prescriptions
         </h3>
         <div class="space-y-3">
-          <div 
-            v-for="prescription in recentPrescriptions.slice(0, 5)" 
+          <div
+            v-for="prescription in recentPrescriptions.slice(0, 5)"
             :key="prescription.id"
             class="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
           >
             <div>
-              <p class="font-semibold text-gray-800">{{ getPatientName(prescription.patientId) }}</p>
+              <p class="font-semibold text-gray-800">{{ getPatientName(prescription.patient_id) }}</p>
               <p class="text-sm text-gray-500">{{ prescription.medication }}</p>
             </div>
             <span class="text-xs text-gray-400">{{ prescription.date }}</span>
@@ -129,7 +129,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useHospitalData } from '../../composables/useHospitalData'
 
 export default {
@@ -141,39 +141,47 @@ export default {
     }
   },
   setup(props) {
-    const { 
-      getPatientName, 
+    const {
+      getPatientName,
       getDoctorAppointments,
       getDoctorTodayAppointments,
       getDoctorPatients,
       getDoctorPrescriptions
     } = useHospitalData()
-    
-    const myAppointments = getDoctorAppointments(props.doctorId)
-    const todaysAppointments = getDoctorTodayAppointments(props.doctorId)
+
+    const myAppointments = ref([])
+    const todaysAppointments = ref([])
     const myPatients = getDoctorPatients(props.doctorId)
     const myPrescriptions = getDoctorPrescriptions(props.doctorId)
-    
+
+    onMounted(async () => {
+      myAppointments.value = await getDoctorAppointments() || []
+      todaysAppointments.value = await getDoctorTodayAppointments() || []
+    })
+
     const upcomingAppointments = computed(() => {
       const today = new Date().toISOString().split('T')[0]
       return myAppointments.value
-        .filter(a => a.date >= today && a.status === 'Scheduled')
-        .sort((a, b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time))
+        .filter(a => (a.schedule?.date >= today) && a.status === 'scheduled')
+        .sort((a, b) => new Date(a.schedule?.date + ' ' + a.schedule?.time_slot) - new Date(b.schedule?.date + ' ' + b.schedule?.time_slot))
     })
-    
+
     const recentPrescriptions = computed(() => {
       return [...myPrescriptions.value].sort((a, b) => new Date(b.date) - new Date(a.date))
     })
-    
+
     const getStatusClass = (status) => {
       const classes = {
+        'scheduled': 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold',
         'Scheduled': 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold',
+        'completed': 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold',
         'Completed': 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold',
+        'cancelled': 'px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold',
         'Cancelled': 'px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold'
       }
-      return classes[status] || classes['Scheduled']
+      return classes[status] || classes['scheduled']
     }
-    
+
     return {
       myAppointments,
       todaysAppointments,

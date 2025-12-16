@@ -18,7 +18,7 @@
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           ]"
         >
-          {{ filter.label }} ({{ getFilterCount(filter.value) }})
+          {{ filter.label }}
         </button>
       </div>
 
@@ -40,15 +40,11 @@
                 <i class="fas fa-user-md text-white text-2xl"></i>
               </div>
               <div>
-                <h3 class="font-bold text-xl text-gray-800">{{ getDoctorName(apt.doctorId) }}</h3>
-                <p class="text-gray-600">{{ getDoctorSpecialization(apt.doctorId) }}</p>
+                <h3 class="font-bold text-xl text-gray-800">{{ buildDoctorName(apt.schedule.doctor) }}</h3>
+                <p class="text-gray-600">{{ apt.schedule.doctor.specialization.name }}</p>
                 <p class="text-gray-700 mt-2">
                   <i class="fas fa-calendar text-blue-500 mr-2"></i>
-                  {{ formatDate(apt.date) }} at {{ apt.time }}
-                </p>
-                <p class="text-gray-700">
-                  <i class="fas fa-notes-medical text-purple-500 mr-2"></i>
-                  {{ apt.reason }}
+                  {{ formatDate(apt.schedule.date) }} at {{ apt.schedule.start_time }} to {{ apt.schedule.end_time }}
                 </p>
               </div>
             </div>
@@ -56,7 +52,7 @@
             <div class="text-right">
               <span :class="getStatusClass(apt.status)">{{ apt.status }}</span>
               <button
-                v-if="apt.status === 'Scheduled'"
+                v-if="apt.status === 'scheduled'"
                 @click="handleCancelAppointment(apt.id)"
                 class="block mt-3 bg-red-100 text-red-600 px-4 py-2 rounded-lg hover:bg-red-200 transition text-sm font-semibold"
               >
@@ -71,8 +67,8 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { ref, computed, onMounted } from 'vue'
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientAppointments',
@@ -88,29 +84,36 @@ export default {
       getDoctorSpecialization,
       getPatientAppointments,
       cancelAppointment,
-      addActivity
-    } = useHospitalData()
+      buildDoctorName,
+      initializeData
+    } = usePatientData()
 
-    const myAppointments = getPatientAppointments(props.patientId)
+    const myAppointments = ref([])
+    console.log('app', myAppointments)
     const activeFilter = ref('all')
 
     const filters = [
       { label: 'All', value: 'all' },
-      { label: 'Scheduled', value: 'Scheduled' },
-      { label: 'Completed', value: 'Completed' },
-      { label: 'Cancelled', value: 'Cancelled' }
+      { label: 'Scheduled', value: 'scheduled' },
+      { label: 'Completed', value: 'completed' },
+      { label: 'Cancelled', value: 'cancelled' }
     ]
 
     const filteredAppointments = computed(() => {
+      if (!myAppointments.value) {
+        return []
+      }
       if (activeFilter.value === 'all') {
         return [...myAppointments.value].sort((a, b) => new Date(b.date) - new Date(a.date))
       }
+      console.log(myAppointments.value)
       return myAppointments.value
         .filter(a => a.status === activeFilter.value)
         .sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
     const getFilterCount = (filterValue) => {
+      if (!myAppointments.value) return 0
       if (filterValue === 'all') return myAppointments.value.length
       return myAppointments.value.filter(a => a.status === filterValue).length
     }
@@ -137,14 +140,17 @@ export default {
     const handleCancelAppointment = (appointmentId) => {
       if (confirm('Are you sure you want to cancel this appointment?')) {
         cancelAppointment(appointmentId)
-        addActivity('Appointment cancelled', 'fas fa-calendar-times', 'bg-red-500')
       }
     }
-
+    onMounted(async () => {
+      await initializeData()
+      myAppointments.value = await getPatientAppointments() || []
+    })
     return {
       activeFilter,
       filters,
       filteredAppointments,
+      buildDoctorName,
       getFilterCount,
       getDoctorName,
       getDoctorSpecialization,

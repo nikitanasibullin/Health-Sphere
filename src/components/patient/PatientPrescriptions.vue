@@ -33,49 +33,59 @@
         >
           <div class="flex justify-between items-start mb-4">
             <div>
-              <h3 class="font-bold text-lg text-gray-800">{{ prescription.medication }}</h3>
-              <p class="text-sm text-gray-600">
-                Prescribed by {{ getDoctorName(prescription.doctorId) }}
+              <h3 class="font-bold text-lg text-gray-800">{{ prescription.name }}</h3>
+              <p v-if="hasValue(prescription.prescribed_by)" class="text-sm text-gray-600">
+                Prescribed by {{ prescription.prescribed_by }}
               </p>
-              <p class="text-sm text-gray-500">{{ formatDate(prescription.date) }}</p>
+              <p v-if="hasValue(prescription.start_date)" class="text-sm text-gray-500">{{ formatDate(prescription.start_date) }}</p>
             </div>
             <span :class="getStatusClass(prescription)">
-              {{ isActive(prescription) ? 'Active' : 'Expired' }}
+              {{ getPrescriptionStatus(prescription) }}
             </span>
           </div>
 
-          <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4 mb-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
+          <!-- Dosage & Frequency -->
+          <div v-if="hasValue(prescription.dosage) || hasValue(prescription.frequency)" class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4 mb-4">
+            <div class="grid gap-4" :class="hasValue(prescription.dosage) && hasValue(prescription.frequency) ? 'grid-cols-2' : 'grid-cols-1'">
+              <div v-if="hasValue(prescription.dosage)">
                 <p class="text-xs font-semibold text-gray-500 uppercase">Dosage</p>
                 <p class="text-gray-800 font-medium">{{ prescription.dosage }}</p>
               </div>
-              <div>
-                <p class="text-xs font-semibold text-gray-500 uppercase">Duration</p>
-                <p class="text-gray-800 font-medium">{{ prescription.duration }}</p>
+              <div v-if="hasValue(prescription.frequency)">
+                <p class="text-xs font-semibold text-gray-500 uppercase">Frequency</p>
+                <p class="text-gray-800 font-medium">{{ prescription.frequency }}</p>
               </div>
             </div>
           </div>
 
-          <div v-if="prescription.notes" class="mb-4">
+          <!-- Duration -->
+          <div v-if="hasValue(prescription.start_date) || hasValue(prescription.end_date)" class="bg-gray-50 rounded-lg p-4 mb-4">
+            <div class="grid gap-4" :class="hasValue(prescription.start_date) && hasValue(prescription.end_date) ? 'grid-cols-2' : 'grid-cols-1'">
+              <div v-if="hasValue(prescription.start_date)">
+                <p class="text-xs font-semibold text-gray-500 uppercase">Start Date</p>
+                <p class="text-gray-800 font-medium">{{ formatDate(prescription.start_date) }}</p>
+              </div>
+              <div v-if="hasValue(prescription.end_date)">
+                <p class="text-xs font-semibold text-gray-500 uppercase">End Date</p>
+                <p class="text-gray-800 font-medium">{{ formatDate(prescription.end_date) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes - only if exists -->
+          <div v-if="hasValue(prescription.notes)" class="mb-4">
             <p class="text-sm text-gray-600">
               <i class="fas fa-info-circle text-blue-500 mr-1"></i>
               <strong>Notes:</strong> {{ prescription.notes }}
             </p>
           </div>
 
-          <div class="flex gap-2">
+          <div v-if="hasDetails(prescription)" class="flex gap-2">
             <button
               @click="viewDetails(prescription)"
               class="flex-1 bg-blue-100 text-blue-700 py-2 rounded-lg hover:bg-blue-200 transition text-sm font-semibold"
             >
               <i class="fas fa-eye mr-1"></i>View Details
-            </button>
-            <button
-              @click="requestRefill(prescription)"
-              class="flex-1 bg-green-100 text-green-700 py-2 rounded-lg hover:bg-green-200 transition text-sm font-semibold"
-            >
-              <i class="fas fa-redo mr-1"></i>Request Refill
             </button>
           </div>
         </div>
@@ -84,41 +94,36 @@
 
     <!-- Prescription Details Modal -->
     <div
-      v-if="showDetailsModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      v-if="showDetailsModal && selectedPrescription"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       @click.self="showDetailsModal = false"
     >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
-        <div class="flex justify-between items-center mb-6">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-fadeIn">
+        <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
           <h3 class="text-2xl font-bold text-gray-800">Prescription Details</h3>
           <button @click="showDetailsModal = false" class="text-gray-500 hover:text-gray-700">
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
 
-        <div v-if="selectedPrescription" class="space-y-4">
+        <div class="p-6 space-y-4">
           <div class="p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl">
-            <h4 class="font-bold text-xl text-gray-800">{{ selectedPrescription.medication }}</h4>
+            <h4 class="font-bold text-xl text-gray-800">{{ selectedPrescription.name }}</h4>
+            <span :class="getStatusClass(selectedPrescription)" class="mt-2 inline-block">
+              {{ getPrescriptionStatus(selectedPrescription) }}
+            </span>
           </div>
 
           <div class="space-y-3">
-            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+            <div v-if="hasValue(selectedPrescription.prescribed_by)" class="flex items-center p-3 bg-gray-50 rounded-lg">
               <i class="fas fa-user-md text-green-500 mr-3 w-5"></i>
               <div>
                 <p class="text-xs text-gray-500">Prescribed By</p>
-                <p class="font-semibold">{{ getDoctorName(selectedPrescription.doctorId) }}</p>
+                <p class="font-semibold">{{ selectedPrescription.prescribed_by }}</p>
               </div>
             </div>
 
-            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-              <i class="fas fa-calendar text-blue-500 mr-3 w-5"></i>
-              <div>
-                <p class="text-xs text-gray-500">Date</p>
-                <p class="font-semibold">{{ formatDate(selectedPrescription.date) }}</p>
-              </div>
-            </div>
-
-            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+            <div v-if="hasValue(selectedPrescription.dosage)" class="flex items-center p-3 bg-gray-50 rounded-lg">
               <i class="fas fa-pills text-purple-500 mr-3 w-5"></i>
               <div>
                 <p class="text-xs text-gray-500">Dosage</p>
@@ -126,74 +131,54 @@
               </div>
             </div>
 
-            <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+            <div v-if="hasValue(selectedPrescription.frequency)" class="flex items-center p-3 bg-gray-50 rounded-lg">
               <i class="fas fa-clock text-orange-500 mr-3 w-5"></i>
               <div>
-                <p class="text-xs text-gray-500">Duration</p>
-                <p class="font-semibold">{{ selectedPrescription.duration }}</p>
+                <p class="text-xs text-gray-500">Frequency</p>
+                <p class="font-semibold">{{ selectedPrescription.frequency }}</p>
               </div>
             </div>
 
-            <div v-if="selectedPrescription.notes" class="p-3 bg-yellow-50 rounded-lg">
-              <p class="text-xs text-gray-500 mb-1">Special Instructions</p>
+            <!-- Dates -->
+            <div v-if="hasValue(selectedPrescription.start_date) || hasValue(selectedPrescription.end_date)" class="grid gap-3" :class="hasValue(selectedPrescription.start_date) && hasValue(selectedPrescription.end_date) ? 'grid-cols-2' : 'grid-cols-1'">
+              <div v-if="hasValue(selectedPrescription.start_date)" class="p-3 bg-gray-50 rounded-lg">
+                <p class="text-xs text-gray-500">
+                  <i class="fas fa-calendar-plus text-blue-500 mr-1"></i>Start Date
+                </p>
+                <p class="font-semibold">{{ formatDate(selectedPrescription.start_date) }}</p>
+              </div>
+              <div v-if="hasValue(selectedPrescription.end_date)" class="p-3 bg-gray-50 rounded-lg">
+                <p class="text-xs text-gray-500">
+                  <i class="fas fa-calendar-minus text-red-500 mr-1"></i>End Date
+                </p>
+                <p class="font-semibold">{{ formatDate(selectedPrescription.end_date) }}</p>
+              </div>
+            </div>
+
+            <div v-if="hasValue(selectedPrescription.notes)" class="p-3 bg-yellow-50 rounded-lg">
+              <p class="text-xs text-gray-500 mb-1">
+                <i class="fas fa-sticky-note text-yellow-500 mr-1"></i>Special Instructions
+              </p>
               <p class="text-gray-800">{{ selectedPrescription.notes }}</p>
+            </div>
+
+            <!-- Days Remaining -->
+            <div v-if="isPrescriptionActive(selectedPrescription) && hasValue(selectedPrescription.end_date) && getDaysRemaining(selectedPrescription) > 0" class="p-3 bg-green-50 rounded-lg">
+              <p class="text-xs text-gray-500 mb-1">
+                <i class="fas fa-hourglass-half text-green-500 mr-1"></i>Days Remaining
+              </p>
+              <p class="font-semibold text-green-700">{{ getDaysRemaining(selectedPrescription) }} days</p>
             </div>
           </div>
         </div>
 
-        <button
-          @click="showDetailsModal = false"
-          class="w-full mt-6 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-
-    <!-- Refill Request Modal -->
-    <div
-      v-if="showRefillModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="showRefillModal = false"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-2xl font-bold text-gray-800">Request Refill</h3>
-          <button @click="showRefillModal = false" class="text-gray-500 hover:text-gray-700">
-            <i class="fas fa-times text-xl"></i>
-          </button>
-        </div>
-
-        <div v-if="selectedPrescription" class="mb-6">
-          <p class="text-gray-600 mb-4">
-            Request a refill for <strong>{{ selectedPrescription.medication }}</strong>?
-          </p>
-
-          <div class="p-4 bg-blue-50 rounded-lg">
-            <p class="text-sm text-blue-800">
-              <i class="fas fa-info-circle mr-2"></i>
-              Your request will be sent to {{ getDoctorName(selectedPrescription.doctorId) }} for approval.
-            </p>
-          </div>
-        </div>
-
-        <div class="flex gap-4">
+        <div class="sticky bottom-0 bg-white border-t p-4">
           <button
-            @click="showRefillModal = false"
-            class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            @click="showDetailsModal = false"
+            class="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold"
           >
-            Cancel
+            Close
           </button>
-          <button
-            @click="submitRefillRequest"
-            class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition"
-          >
-            <i class="fas fa-paper-plane mr-2"></i>Submit Request
-          </button>
-        </div>
-
-        <div v-if="refillSuccess" class="mt-4 p-3 bg-green-100 text-green-700 rounded-lg animate-fadeIn">
-          <i class="fas fa-check-circle mr-2"></i>Refill request submitted successfully!
         </div>
       </div>
     </div>
@@ -201,42 +186,67 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { ref, computed, onMounted } from 'vue'
+import { usePatientData } from '../../composables/usePatientData'
 
 export default {
   name: 'PatientPrescriptions',
-  props: {
-    patientId: {
-      type: Number,
-      required: true
-    }
-  },
-  setup(props) {
-    const { getDoctorName, getPatientPrescriptions, addActivity } = useHospitalData()
+  setup() {
+    const { getPatientMedication } = usePatientData()
 
-    const prescriptions = getPatientPrescriptions(props.patientId)
-
+    // State
+    const prescriptions = ref([])
     const search = ref('')
     const showDetailsModal = ref(false)
-    const showRefillModal = ref(false)
     const selectedPrescription = ref(null)
-    const refillSuccess = ref(false)
 
+    // Helper to check if value exists and is not empty
+    const hasValue = (value) => {
+      if (value === null || value === undefined) return false
+      if (typeof value === 'string' && value.trim() === '') return false
+      if (typeof value === 'number') return true
+      if (typeof value === 'boolean') return true
+      return true
+    }
+
+    // Check if prescription has any details worth showing in modal
+    const hasDetails = (prescription) => {
+      return hasValue(prescription.prescribed_by) ||
+        hasValue(prescription.dosage) ||
+        hasValue(prescription.frequency) ||
+        hasValue(prescription.start_date) ||
+        hasValue(prescription.end_date) ||
+        hasValue(prescription.notes)
+    }
+
+    // Computed
     const filteredPrescriptions = computed(() => {
-      if (!search.value) {
-        return [...prescriptions.value].sort((a, b) => new Date(b.date) - new Date(a.date))
+      if (!prescriptions.value || prescriptions.value.length === 0) {
+        return []
       }
-      const searchLower = search.value.toLowerCase()
-      return prescriptions.value
-        .filter(p =>
-          p.medication.toLowerCase().includes(searchLower) ||
-          getDoctorName(p.doctorId).toLowerCase().includes(searchLower)
+
+      let filtered = [...prescriptions.value]
+
+      if (search.value) {
+        const searchLower = search.value.toLowerCase()
+        filtered = filtered.filter(p =>
+          (hasValue(p.name) && p.name.toLowerCase().includes(searchLower)) ||
+          (hasValue(p.dosage) && p.dosage.toLowerCase().includes(searchLower)) ||
+          (hasValue(p.frequency) && p.frequency.toLowerCase().includes(searchLower)) ||
+          (hasValue(p.prescribed_by) && p.prescribed_by.toLowerCase().includes(searchLower))
         )
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
+      }
+
+      return filtered.sort((a, b) => {
+        const dateA = a.start_date ? new Date(a.start_date) : new Date(0)
+        const dateB = b.start_date ? new Date(b.start_date) : new Date(0)
+        return dateB - dateA
+      })
     })
 
+    // Methods
     const formatDate = (dateStr) => {
+      if (!hasValue(dateStr)) return null
       const date = new Date(dateStr)
       return date.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -245,18 +255,95 @@ export default {
       })
     }
 
-    const isActive = (prescription) => {
-      // Simple check - if prescribed within last 90 days, consider active
-      const prescriptionDate = new Date(prescription.date)
+    const isPrescriptionActive = (prescription) => {
+      // Check is_active flag first if available
+      if (typeof prescription.is_active === 'boolean') {
+        return prescription.is_active
+      }
+      if (!hasValue(prescription.end_date)) return true
+      const endDate = new Date(prescription.end_date)
       const today = new Date()
-      const diffDays = Math.floor((today - prescriptionDate) / (1000 * 60 * 60 * 24))
-      return diffDays <= 90
+      today.setHours(0, 0, 0, 0)
+      return endDate >= today
+    }
+
+    const getPrescriptionStatus = (prescription) => {
+      // Check is_active flag first
+      if (typeof prescription.is_active === 'boolean' && !prescription.is_active) {
+        return 'Expired'
+      }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      if (hasValue(prescription.start_date)) {
+        const startDate = new Date(prescription.start_date)
+        if (today < startDate) return 'Upcoming'
+      }
+
+      if (hasValue(prescription.end_date)) {
+        const endDate = new Date(prescription.end_date)
+        if (today > endDate) return 'Expired'
+      }
+
+      return 'Active'
     }
 
     const getStatusClass = (prescription) => {
-      return isActive(prescription)
-        ? 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold'
-        : 'px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold'
+      const status = getPrescriptionStatus(prescription)
+      const classes = {
+        'Active': 'px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold',
+        'Expired': 'px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold',
+        'Upcoming': 'px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold'
+      }
+      return classes[status]
+    }
+
+    const getDaysRemaining = (prescription) => {
+      if (!hasValue(prescription.end_date)) return 0
+      const endDate = new Date(prescription.end_date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const diffTime = endDate - today
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      return Math.max(0, diffDays)
+    }
+
+    // Clean string value - returns null if empty
+    const cleanString = (value) => {
+      if (value === null || value === undefined) return null
+      if (typeof value === 'string') {
+        const trimmed = value.trim()
+        return trimmed === '' ? null : trimmed
+      }
+      return value
+    }
+
+    const transformMedicationData = (data) => {
+      if (!data) return []
+
+      // Handle API response structure: { medicaments: [...] }
+      let medicaments = []
+
+      if (data.medicaments && Array.isArray(data.medicaments)) {
+        medicaments = data.medicaments
+      } else if (Array.isArray(data)) {
+        medicaments = data
+      } else {
+        return []
+      }
+
+      return medicaments.map((item) => ({
+        id: item.id,
+        name: cleanString(item.name) || cleanString(item.medicament_name) || cleanString(item.medication) || 'Unknown Medication',
+        dosage: cleanString(item.dosage),
+        frequency: cleanString(item.frequency),
+        start_date: cleanString(item.start_date) || cleanString(item.date),
+        end_date: cleanString(item.end_date),
+        notes: cleanString(item.notes) || cleanString(item.instructions),
+        prescribed_by: cleanString(item.prescribed_by),
+        is_active: item.is_active
+      }))
     }
 
     const viewDetails = (prescription) => {
@@ -264,40 +351,31 @@ export default {
       showDetailsModal.value = true
     }
 
-    const requestRefill = (prescription) => {
-      selectedPrescription.value = prescription
-      refillSuccess.value = false
-      showRefillModal.value = true
-    }
-
-    const submitRefillRequest = () => {
-      refillSuccess.value = true
-      addActivity(
-        `Refill requested for ${selectedPrescription.value.medication}`,
-        'fas fa-redo',
-        'bg-green-500'
-      )
-
-      setTimeout(() => {
-        showRefillModal.value = false
-        refillSuccess.value = false
-      }, 2000)
-    }
+    onMounted(async () => {
+      try {
+        const medicationData = await getPatientMedication()
+        console.log('Raw medication data:', medicationData)
+        prescriptions.value = transformMedicationData(medicationData)
+        console.log('Transformed prescriptions:', prescriptions.value)
+      } catch (error) {
+        console.error('Error loading prescriptions:', error)
+        prescriptions.value = []
+      }
+    })
 
     return {
       search,
       showDetailsModal,
-      showRefillModal,
       selectedPrescription,
-      refillSuccess,
       filteredPrescriptions,
-      getDoctorName,
+      hasValue,
+      hasDetails,
       formatDate,
-      isActive,
+      isPrescriptionActive,
+      getPrescriptionStatus,
       getStatusClass,
-      viewDetails,
-      requestRefill,
-      submitRefillRequest
+      getDaysRemaining,
+      viewDetails
     }
   }
 }
