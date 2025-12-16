@@ -12,7 +12,6 @@
           <div>
             <p class="text-blue-100 text-sm font-semibold">Total Patients</p>
             <p class="text-4xl font-bold mt-2">{{ patients.length }}</p>
-            <p class="text-blue-100 text-xs mt-2">+12% from last month</p>
           </div>
           <div class="bg-white bg-opacity-20 p-4 rounded-full">
             <i class="fas fa-users text-3xl"></i>
