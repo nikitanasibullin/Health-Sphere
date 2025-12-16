@@ -152,23 +152,6 @@ def get_doctors_schedule(doctor_id: int,current_patient: models.Patient = Depend
     
     return schedules
 
-
-@router.get("/appointments", response_model=List[schemas.AppointmentResponseToPatient])
-@exceptions.handle_exceptions(custom_message="Не удалось получить список приёмов")
-def get_my_appointments(
-    current_patient: models.Patient = Depends(oauth2.get_current_patient),
-    db: Session = Depends(get_db)
-):
-    """
-    Получение всех предстоящих записей на прием текущего пациента
-    """
-
-    appointments = db.query(models.Appointment)\
-        .filter(models.Appointment.patient_id == current_patient.id,models.Appointment.status=="scheduled")\
-        .order_by(models.Appointment.id.desc())\
-        .all()
-    
-    return appointments
         
 
 
@@ -176,8 +159,8 @@ def get_my_appointments(
 @router.get("/appointments", response_model=List[schemas.AppointmentResponseToPatient])
 @exceptions.handle_exceptions(custom_message="Не удалось получить все записи на прием")
 def get_my_appointments(
-    current_patient: models.Patient = Depends(oauth2.get_current_patient),
     status_filter: Optional[str] = None,
+    current_patient: models.Patient = Depends(oauth2.get_current_patient),
     db: Session = Depends(get_db)
 ):
     """
@@ -192,6 +175,7 @@ def get_my_appointments(
         appointments = appointments.filter(models.Appointment.status == status_filter)
     appointments = appointments.order_by(models.Appointment.id.desc()).all()
     return appointments
+
 
 
 
