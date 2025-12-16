@@ -59,9 +59,6 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ doctor.phone }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <button @click="editDoctor(doctor)" class="text-green-600 hover:text-green-800 mr-3" title="Edit">
-                  <i class="fas fa-edit"></i>
-                </button>
                 <button @click="handleDelete(doctor.id)" class="text-red-600 hover:text-red-800" title="Delete">
                   <i class="fas fa-trash"></i>
                 </button>
@@ -81,11 +78,16 @@
     <!-- Add/Edit Modal -->
     <div
       v-if="showAddModal || showEditModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       @click.self="closeModals"
     >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-fadeIn">
-        <div class="flex justify-between items-center mb-6">
+
+      <div
+        class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col animate-fadeIn"
+        @click.stop
+      >
+
+        <div class="flex justify-between items-center p-8 pb-6 flex-shrink-0">
           <h3 class="text-2xl font-bold text-gray-800">
             {{ showEditModal ? 'Edit Doctor' : 'Add New Doctor' }}
           </h3>
@@ -94,98 +96,126 @@
           </button>
         </div>
 
-        <form @submit.prevent="handleSubmit">
-          <div class="space-y-4">
-            <div>
-              <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
-              <input
-                v-model="form.name"
-                type="text"
-                required
-                placeholder="Dr. Full Name"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-            </div>
-            <div>
-              <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
-              <input
-                v-model="form.email"
-                type="email"
-                required
-                placeholder="doctor@hospital.com"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-            </div>
-            <div>
-              <label class="block text-gray-700 text-sm font-bold mb-2">Phone</label>
-              <input
-                v-model="form.phone"
-                type="tel"
-                required
-                placeholder="Phone number"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-            </div>
 
-            <div v-if="showAddModal">
-              <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
-              <input
-                v-model="form.password"
-                type="password"
-                required
-                placeholder="Password"
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
+        <div class="flex-1 overflow-y-auto px-8">
+          <form @submit.prevent="handleSubmit" id="doctorForm">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+                <input
+                  v-model="form.firstName"
+                  type="text"
+                  required
+                  placeholder="First Name"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
+                <input
+                  v-model="form.lastName"
+                  type="text"
+                  required
+                  placeholder="Last Name"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Patronymic</label>
+                <input
+                  v-model="form.patronymic"
+                  type="text"
+                  required
+                  placeholder="Patronymic"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                <input
+                  v-model="form.email"
+                  type="email"
+                  required
+                  placeholder="doctor@hospital.com"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Phone</label>
+                <input
+                  v-model="form.phone"
+                  type="tel"
+                  required
+                  placeholder="Phone number"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+
+              <div v-if="showAddModal">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                <input
+                  v-model="form.password"
+                  type="password"
+                  required
+                  placeholder="Password"
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+              </div>
+
+              <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">Specialization</label>
+                <!-- Select dropdown -->
+                <div class="relative">
+                  <select
+                    v-model="form.specialization_id"
+                    required
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 appearance-none"
+                  >
+                    <option value="">Select specialization...</option>
+                    <option
+                      v-for="spec in specializations"
+                      :key="spec.id"
+                      :value="spec.id"
+                    >
+                      {{ spec.name }}
+                    </option>
+                  </select>
+                  <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                </div>
+              </div>
             </div>
+          </form>
+        </div>
 
-            <div>
-              <label class="block text-gray-700 text-sm font-bold mb-2">Specialization</label>
-              <select
-                v-model="form.specialization"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Select specialization...</option>
-                <option value="Cardiology">Cardiology</option>
-                <option value="Neurology">Neurology</option>
-                <option value="Pediatrics">Pediatrics</option>
-                <option value="Orthopedics">Orthopedics</option>
-                <option value="Dermatology">Dermatology</option>
-                <option value="General Practice">General Practice</option>
-              </select>
-            </div>
-
-          </div>
-
-          <div class="flex gap-4 mt-6">
-            <button
-              type="button"
-              @click="closeModals"
-              class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition"
-            >
-              {{ showEditModal ? 'Update' : 'Add Doctor' }}
-            </button>
-          </div>
-        </form>
+        <div class="flex gap-4 p-8 pt-6 flex-shrink-0">
+          <button
+            type="button"
+            @click="closeModals"
+            class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="doctorForm"
+            class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition"
+          >
+            {{ showEditModal ? 'Update' : 'Add Doctor' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData.js'
+import { ref, computed, onMounted } from 'vue'
+import { useAdminData } from '../../composables/useAdminData'
 
 export default {
   name: 'AdminDoctors',
   setup() {
-    const { doctors, addDoctor, updateDoctor, deleteDoctor, addActivity } = useHospitalData()
+    const { initializeData, specializations, doctors, addDoctor, updateDoctor, deleteDoctor, addActivity } = useAdminData()
 
     const search = ref('')
     const showAddModal = ref(false)
@@ -193,11 +223,13 @@ export default {
     const editingId = ref(null)
 
     const form = ref({
-      name: '',
+      firstName: '',
+      lastName: '',
+      patronymic: '',
       email: '',
       phone: '',
       password: '',
-      specialization: ''
+      specialization_id: ''
     })
 
     const filteredDoctors = computed(() => {
@@ -210,7 +242,15 @@ export default {
     })
 
     const resetForm = () => {
-      form.value = { name: '', email: '', phone: '', specialization: '' }
+      form.value = {
+        firstName: '',
+        lastName: '',
+        patronymic: '',
+        email: '',
+        phone: '',
+        password: '',
+        specialization_id: ''
+      }
       editingId.value = null
     }
 
@@ -221,7 +261,10 @@ export default {
     }
 
     const editDoctor = (doctor) => {
-      form.value = { ...doctor }
+      form.value = {
+        ...doctor,
+        specialization_id: doctor.specialization_id || doctor.specialization?.id  // ✅ ADD
+      }
       editingId.value = doctor.id
       showEditModal.value = true
     }
@@ -229,28 +272,35 @@ export default {
     const handleSubmit = () => {
       if (showEditModal.value && editingId.value) {
         updateDoctor(editingId.value, { ...form.value })
-        addActivity(`Doctor ${form.value.name} updated`, 'fas fa-edit', 'bg-green-500')
       } else {
-        addDoctor({ ...form.value })
-        addActivity(`New doctor ${form.value.name} added`, 'fas fa-user-md', 'bg-green-500')
+        addDoctor({
+          first_name: form.value.firstName,
+          last_name: form.value.lastName,
+          patronymic: form.value.patronymic,
+          phone_number: form.value.phone,
+          email: form.value.email,
+          password: form.value.password,
+          specialization_id: form.value.specialization_id
+        })
       }
       closeModals()
     }
 
     const handleDelete = (id) => {
       if (confirm('Are you sure you want to delete this doctor?')) {
-        const doctor = doctors.value.find(d => d.id === id)
         deleteDoctor(id)
-        addActivity(`Doctor ${doctor?.name} removed`, 'fas fa-trash', 'bg-red-500')
       }
     }
-
+    onMounted(async () => {
+      await initializeData()
+    })
     return {
       search,
       showAddModal,
       showEditModal,
       form,
       filteredDoctors,
+      specializations,
       closeModals,
       editDoctor,
       handleSubmit,

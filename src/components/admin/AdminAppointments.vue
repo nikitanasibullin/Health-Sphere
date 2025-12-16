@@ -6,12 +6,7 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-calendar-alt text-purple-500 mr-2"></i>Manage Appointments
         </h2>
-        <button
-          @click="showAddModal = true"
-          class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 shadow-lg transition"
-        >
-          <i class="fas fa-plus mr-2"></i>Add Appointment
-        </button>
+
       </div>
 
       <!-- Table -->
@@ -31,17 +26,15 @@
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-for="apt in appointments" :key="apt.id" class="hover:bg-gray-50 transition">
               <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ apt.id }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ getPatientName(apt.patientId) }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ getDoctorName(apt.doctorId) }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ apt.date }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ apt.time }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ `${apt.patient.first_name} ${apt.patient.last_name} ${apt.patient.patronymic}` }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ `${apt.schedule.doctor.first_name} ${apt.schedule.doctor.last_name} ${apt.schedule.doctor.patronymic}` }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ apt.schedule.date }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ apt.schedule.start_time }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span :class="getStatusClass(apt.status)">{{ apt.status }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <button @click="cycleStatus(apt)" class="text-blue-600 hover:text-blue-800 mr-3" title="Change Status">
-                  <i class="fas fa-sync-alt"></i>
-                </button>
+              <td class="px-10 py-4 whitespace-nowrap">
+
                 <button @click="handleDelete(apt.id)" class="text-red-600 hover:text-red-800" title="Delete">
                   <i class="fas fa-trash"></i>
                 </button>
@@ -77,7 +70,7 @@
               >
                 <option value="">Select patient...</option>
                 <option v-for="patient in patients" :key="patient.id" :value="patient.id">
-                  {{ patient.name }}
+                  {{ `${patient.first_name} ${patient.last_name} ${patient.patronymic}`}}
                 </option>
               </select>
             </div>
@@ -136,8 +129,8 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData.js'
+import { onMounted, ref } from 'vue'
+import { useAdminData } from '../../composables/useAdminData'
 
 export default {
   name: 'AdminAppointments',
@@ -151,8 +144,8 @@ export default {
       addAppointment,
       updateAppointmentStatus,
       deleteAppointment,
-      addActivity
-    } = useHospitalData()
+      initializeData
+    } = useAdminData()
 
     const showAddModal = ref(false)
     const form = ref({
@@ -177,7 +170,7 @@ export default {
       const nextStatus = statuses[(currentIndex + 1) % statuses.length]
       updateAppointmentStatus(apt.id, nextStatus)
     }
-
+    console.log(appointments)
     const handleSubmit = () => {
       addAppointment({
         patientId: parseInt(form.value.patientId),
@@ -185,7 +178,6 @@ export default {
         date: form.value.date,
         time: form.value.time
       })
-      addActivity('New appointment scheduled', 'fas fa-calendar-plus', 'bg-purple-500')
       showAddModal.value = false
       form.value = { patientId: '', doctorId: '', date: '', time: '' }
     }
@@ -193,10 +185,11 @@ export default {
     const handleDelete = (id) => {
       if (confirm('Are you sure you want to delete this appointment?')) {
         deleteAppointment(id)
-        addActivity('Appointment cancelled', 'fas fa-calendar-times', 'bg-red-500')
       }
     }
-
+    onMounted(async () => {
+      await initializeData()
+    })
     return {
       patients,
       doctors,

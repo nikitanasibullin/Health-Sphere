@@ -6,24 +6,21 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-users text-blue-500 mr-2"></i>Manage Patients
         </h2>
-        <button
-          @click="showAddModal = true"
-          class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg transition"
-        >
-          <i class="fas fa-plus mr-2"></i>Add Patient
-        </button>
+
       </div>
 
       <!-- Search -->
       <div class="mb-6">
         <div class="relative">
-          <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          <i
+            class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
+          ></i>
           <input
             v-model="search"
             type="text"
             placeholder="Search patients by name, email, or phone..."
             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          />
         </div>
       </div>
 
@@ -32,36 +29,64 @@
         <table class="min-w-full">
           <thead class="bg-gradient-to-r from-blue-50 to-purple-50">
             <tr>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">ID</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Phone</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Age</th>
-              <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                ID
+              </th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                Name
+              </th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                Email
+              </th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                Phone
+              </th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                Birth Date
+              </th>
+              <th
+                class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="patient in filteredPatients" :key="patient.id" class="hover:bg-gray-50 transition">
-              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">{{ patient.id }}</td>
+            <tr
+              v-for="patient in filteredPatients"
+              :key="patient.id"
+              class="hover:bg-gray-50 transition"
+            >
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-900">
+                {{ patient.id }}
+              </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
-                  <div class="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center mr-3">
-                    <span class="text-white font-bold">{{ patient.name.charAt(0) }}</span>
-                  </div>
+
+                  <span class="text-gray-700">{{ `${patient.first_name} ${patient.last_name} ${patient.patronymic}` }}</span>
+
                   <span class="font-semibold text-gray-900">{{ patient.name }}</span>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ patient.email }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ patient.phone }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ patient.age }}</td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <button @click="viewPatient(patient)" class="text-blue-600 hover:text-blue-800 mr-3" title="View">
-                  <i class="fas fa-eye"></i>
-                </button>
-                <button @click="editPatient(patient)" class="text-green-600 hover:text-green-800 mr-3" title="Edit">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button @click="handleDelete(patient.id)" class="text-red-600 hover:text-red-800" title="Delete">
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ patient.phone_number }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ patient.birth_date }}</td>
+              <td class="px-10 py-4 whitespace-nowrap">
+                <button
+                  @click="handleDelete(patient.id)"
+                  class="text-red-600 hover:text-red-800"
+                  title="Delete"
+                >
                   <i class="fas fa-trash"></i>
                 </button>
               </td>
@@ -103,7 +128,7 @@
                 required
                 placeholder="Enter full name"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              />
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Email</label>
@@ -113,7 +138,7 @@
                 required
                 placeholder="Enter email address"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              />
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Phone</label>
@@ -123,7 +148,7 @@
                 required
                 placeholder="Enter phone number"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              />
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Age</label>
@@ -135,7 +160,7 @@
                 max="120"
                 placeholder="Enter age"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+              />
             </div>
           </div>
 
@@ -174,8 +199,12 @@
 
         <div v-if="selectedPatient" class="space-y-4">
           <div class="flex items-center mb-6">
-            <div class="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center mr-4">
-              <span class="text-white font-bold text-2xl">{{ selectedPatient.name.charAt(0) }}</span>
+            <div
+              class="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center mr-4"
+            >
+              <span class="text-white font-bold text-2xl">{{
+                selectedPatient.name.charAt(0)
+              }}</span>
             </div>
             <div>
               <h4 class="text-xl font-bold text-gray-800">{{ selectedPatient.name }}</h4>
@@ -211,13 +240,14 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData.js'
+import { ref, computed, onMounted } from 'vue'
+import { useAdminData } from '../../composables/useAdminData'
 
 export default {
   name: 'AdminPatients',
   setup() {
-    const { patients, addPatient, updatePatient, deletePatient, addActivity } = useHospitalData()
+    const { patients, addPatient, updatePatient, deletePatient, initializeData }
+      = useAdminData()
 
     const search = ref('')
     const showAddModal = ref(false)
@@ -230,16 +260,16 @@ export default {
       name: '',
       email: '',
       phone: '',
-      age: ''
+      age: '',
     })
-
     const filteredPatients = computed(() => {
       if (!search.value) return patients.value
       const searchLower = search.value.toLowerCase()
-      return patients.value.filter(p =>
-        p.name.toLowerCase().includes(searchLower) ||
-        p.email.toLowerCase().includes(searchLower) ||
-        p.phone.includes(search.value)
+      return patients.value.filter(
+        (p) =>
+          p.name.toLowerCase().includes(searchLower) ||
+          p.email.toLowerCase().includes(searchLower) ||
+          p.phone.includes(search.value),
       )
     })
 
@@ -271,29 +301,27 @@ export default {
           name: form.value.name,
           email: form.value.email,
           phone: form.value.phone,
-          age: parseInt(form.value.age)
+          age: parseInt(form.value.age),
         })
-        addActivity(`Patient ${form.value.name} updated`, 'fas fa-edit', 'bg-blue-500')
       } else {
         addPatient({
           name: form.value.name,
           email: form.value.email,
           phone: form.value.phone,
-          age: parseInt(form.value.age)
+          age: parseInt(form.value.age),
         })
-        addActivity(`New patient ${form.value.name} registered`, 'fas fa-user-plus', 'bg-green-500')
       }
       closeModals()
     }
 
     const handleDelete = (id) => {
       if (confirm('Are you sure you want to delete this patient?')) {
-        const patient = patients.value.find(p => p.id === id)
         deletePatient(id)
-        addActivity(`Patient ${patient?.name} deleted`, 'fas fa-trash', 'bg-red-500')
       }
     }
-
+    onMounted(async () => {
+      await initializeData()
+    })
     return {
       search,
       showAddModal,
@@ -306,8 +334,8 @@ export default {
       viewPatient,
       editPatient,
       handleSubmit,
-      handleDelete
+      handleDelete,
     }
-  }
+  },
 }
 </script>

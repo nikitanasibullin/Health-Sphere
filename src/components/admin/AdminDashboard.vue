@@ -68,79 +68,12 @@
         </div>
       </div>
     </div>
-
-    <!-- Revenue and Department Stats -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-      <!-- Revenue Overview -->
-      <div class="bg-white p-6 rounded-2xl shadow-lg card-hover">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">
-          <i class="fas fa-dollar-sign text-green-500 mr-2"></i>Revenue Overview
-        </h3>
-        <div class="space-y-4">
-          <div class="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-            <span class="text-gray-700 font-semibold">Total Revenue</span>
-            <span class="text-2xl font-bold text-green-600"
-              >${{ totalRevenue.toLocaleString() }}</span
-            >
-          </div>
-          <div class="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-            <span class="text-gray-700 font-semibold">This Month</span>
-            <span class="text-xl font-bold text-blue-600"
-              >${{ monthlyRevenue.toLocaleString() }}</span
-            >
-          </div>
-        </div>
-      </div>
-
-      <!-- Departments -->
-      <div class="bg-white p-6 rounded-2xl shadow-lg card-hover">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">
-          <i class="fas fa-building text-blue-500 mr-2"></i>Departments
-        </h3>
-        <div class="space-y-2">
-          <div
-            v-for="dept in departments"
-            :key="dept.name"
-            class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-          >
-            <span class="text-gray-700">{{ dept.name }}</span>
-            <span class="text-blue-600 font-semibold">{{ dept.patients }} patients</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Recent Activity -->
-    <div class="bg-white p-6 rounded-2xl shadow-lg">
-      <h3 class="text-xl font-bold text-gray-800 mb-4">
-        <i class="fas fa-history text-purple-500 mr-2"></i>Recent Activity
-      </h3>
-      <div class="space-y-3">
-        <div
-          v-for="activity in recentActivities"
-          :key="activity.id"
-          class="flex items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
-        >
-          <div
-            :class="[
-              'w-10 h-10 rounded-full flex items-center justify-center mr-4',
-              activity.color,
-            ]"
-          >
-            <i :class="[activity.icon, 'text-white']"></i>
-          </div>
-          <div class="flex-1">
-            <p class="text-gray-800 font-semibold">{{ activity.text }}</p>
-            <p class="text-gray-500 text-sm">{{ activity.time }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
-import { useHospitalData } from '../../composables/useHospitalData.js'
+import { useAdminData } from '../../composables/useAdminData'
+import { onMounted } from 'vue'
 
 export default {
   name: 'AdminDashboard',
@@ -155,8 +88,11 @@ export default {
       scheduledToday,
       totalRevenue,
       monthlyRevenue,
-    } = useHospitalData()
-
+      initializeData
+    } = useAdminData()
+    onMounted(async () => {
+      await initializeData()
+    })
     return {
       patients,
       doctors,
@@ -165,8 +101,7 @@ export default {
       recentActivities,
       todayAppointments,
       scheduledToday,
-      totalRevenue,
-      monthlyRevenue,
+
     }
   },
 }
