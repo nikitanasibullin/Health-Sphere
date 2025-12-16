@@ -425,6 +425,82 @@ def delete_patient(
     return Response(status_code=204)
 
 
+@router.delete("/schedule/{schedule_id}", 
+               status_code=status.HTTP_204_NO_CONTENT)
+@exceptions.handle_exceptions(custom_message="Не удалось удалить расписание")
+def delete_schedule(
+    schedule_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление расписания по ID с каскадным удалением связанных приемов
+    """
+    # Находим расписание
+    schedule = db.query(models.Schedule)\
+        .filter(models.Schedule.id == schedule_id)\
+        .first()
+    
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Расписание с ID {schedule_id} не найдено"
+        )
+    
+    #удаляем все связанные приемы
+    deleted_appointments_count = db.query(models.Appointment)\
+        .filter(models.Appointment.schedule_id == schedule_id)\
+        .delete(synchronize_session=False)
+    
+    # Удаляем само расписание
+    db.delete(schedule)
+    db.commit()
+    
+
+    
+    return Response(status_code=204)
+
+
+@router.delete("/appointments/{appointment_id}", 
+               status_code=status.HTTP_204_NO_CONTENT)
+@exceptions.handle_exceptions(custom_message="Не удалось удалить запись на прием")
+def delete_appointment(
+    appointment_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление записи на прием по ID
+    """
+    # Находим запись на прием
+    appointment = db.query(models.Appointment)\
+        .filter(models.Appointment.id == appointment_id)\
+        .first()
+    
+    if not appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Запись на прием с ID {appointment_id} не найдена"
+        )
+    
+        # Освобождаем слот в расписании
+    schedule = db.query(models.Schedule)\
+        .filter(models.Schedule.id == appointment.schedule_id)\
+        .first()
+    # Удаляем запись
+    db.delete(appointment)
+    db.commit()
+    
+    
+    if schedule:
+        schedule.is_available = True
+        db.add(schedule)
+        db.commit()
+    
+    
+    return Response(status_code=204)
+
+
 
 
 @router.get("/doctors/search/{search_term}",
