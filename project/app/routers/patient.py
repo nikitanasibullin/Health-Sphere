@@ -21,7 +21,7 @@ def register_patient(
     db: Session = Depends(get_db)
 ):
     """
-    Регистрация пациента с созданием пользователя и профиля
+    Регистрация пациента с созданием пользователя и профиля пациента.
     """
     # Проверяем, существует ли пользователь с таким email
     existing_user = db.query(models.User).filter(
@@ -120,12 +120,18 @@ def register_patient(
 @router.get("/doctors",response_model=List[schemas.DoctorResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
 def get_doctors(db: Session = Depends(get_db),current_patient: models.Patient = Depends(oauth2.get_current_patient)):
+    """
+    Получение списка всех докторов
+    """
     doctors= db.query(models.Doctor).all()
     return doctors
 
 @router.get("/schedule/{doctor_id}",response_model=List[schemas.ScheduleResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список расписаний")
 def get_doctors_schedule(doctor_id: int,current_patient: models.Patient = Depends(oauth2.get_current_patient), db: Session = Depends(get_db)):
+    """
+    Получение расписания определённого доктора
+    """
     doctor = db.query(models.Doctor).filter(models.Doctor.id == doctor_id).first()
     
     if not doctor:
@@ -154,7 +160,7 @@ def get_my_appointments(
     db: Session = Depends(get_db)
 ):
     """
-    Получение всех записей на прием текущего пациента
+    Получение всех предстоящих записей на прием текущего пациента
     """
 
     appointments = db.query(models.Appointment)\
@@ -175,7 +181,7 @@ def get_my_appointments(
     db: Session = Depends(get_db)
 ):
     """
-    Получение всех записей на прием текущего пациента
+    Получение всех записей на прием текущего пациента по статусу записи
     """
 
     appointments = db.query(models.Appointment)\

@@ -15,15 +15,16 @@ router = APIRouter(
 
 @router.post("/specializations", 
              response_model=schemas.SpecializationCreate,
-             status_code=status.HTTP_201_CREATED,
-             summary="Создать новую специализацию")
+             status_code=status.HTTP_201_CREATED)
 @exceptions.handle_exceptions(custom_message="Не удалось создать специализацию")
 def create_specialization(
     specialization: schemas.SpecializationCreate,
     current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
-
+    """
+    Создать специализацию.
+    """
 
     # Проверяем, существует ли уже такая специализация
     existing = db.query(models.Specialization)\
@@ -47,26 +48,28 @@ def create_specialization(
     return db_specialization
 
 @router.get("/patients",
-            response_model=List[schemas.PatientResponse],
-            summary="Получить всех пациентов ")
+            response_model=List[schemas.PatientResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список всех пациентов")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
-
+    """
+    Получение списка всех пациентов.
+    """
     specializations = db.query(models.Patient).all()
     return specializations
 
 @router.get("/appointments",
-            response_model=List[schemas.AppointmentResponse],
-            summary="Получить все записи ")
+            response_model=List[schemas.AppointmentResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список всех записей")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
+    """
+    Получение всех записей к врачам
+    """
     appointments = db.query(models.Appointment).all()
     return appointments
 
 
 @router.get("/specializations",
-            response_model=List[schemas.SpecializationResponse],
-            summary="Получить все специализации")
+            response_model=List[schemas.SpecializationResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить все специализации")
 def get_all_specializations(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
     """Получить список всех медицинских специализаций."""
@@ -82,7 +85,7 @@ def register_doctor(
     db: Session = Depends(get_db)
 ):
     """
-    Регистрация врача с созданием пользователя и профиля
+    Регистрация врача с созданием пользователя и профиля врача
     """
     # Проверяем, существует ли пользователь с таким email
     existing_user = db.query(models.User).filter(
@@ -178,7 +181,9 @@ def create_schedule(
     db: Session = Depends(get_db),
     current_admin = Depends(oauth2.get_current_admin)
 ):
-
+    """
+    Создание одного расписания
+    """
     # Просто создаем объект доктора
     db_schedule = models.Schedule(**schedule.model_dump())
     
@@ -195,8 +200,7 @@ def create_schedule(
 
     
 @router.post("/schedule/batch", 
-            response_model=dict,
-            summary="Создать слоты равной длины")
+            response_model=dict)
 @exceptions.handle_exceptions(custom_message="Не удалось создать расписание")
 def create_schedule_batch(
     schedule: schemas.ScheduleBatchCreate,
@@ -204,16 +208,7 @@ def create_schedule_batch(
     db: Session = Depends(get_db)
 ):
     """
-    Делит интервал на N равных слотов без перерывов.
-    
-    Пример:
-    {
-        "doctor_id": 1,
-        "date": "2024-01-20",
-        "start_time": "09:00:00",
-        "end_time": "13:00:00",
-        "slots_count": 4
-    }
+    Делит интервал на N равных слотов без перерывов и создаёт расписания.
     Создаст 4 слота по 1 часу: 9-10, 10-11, 11-12, 12-13
     """
 
@@ -323,8 +318,7 @@ def create_schedule_batch(
 
 
 @router.delete("/doctor/{doctor_id}", 
-               status_code=status.HTTP_204_NO_CONTENT,
-               summary="Удалить врача по ID")
+               status_code=status.HTTP_204_NO_CONTENT)
 @exceptions.handle_exceptions(custom_message="Не удалось удалить доктора")
 def delete_doctor(
     doctor_id: int,
@@ -332,6 +326,9 @@ def delete_doctor(
     db: Session = Depends(get_db)
     
 ):
+    """
+    Удаление врача
+    """
     # Находим врача и пользователя
     doctor = db.query(models.Doctor)\
         .filter(models.Doctor.id == doctor_id)\
@@ -380,14 +377,16 @@ def delete_doctor(
 
 
 @router.delete("/patient/{patient_id}", 
-               status_code=status.HTTP_204_NO_CONTENT,
-               summary="Удалить пациента по ID")
+               status_code=status.HTTP_204_NO_CONTENT)
 @exceptions.handle_exceptions(custom_message="Не удалось удалить пациента")
 def delete_patient(
     patient_id: int,
     current_admin = Depends(oauth2.get_current_admin),
     db: Session = Depends(get_db)
 ):
+    """
+    Удаление пациента
+    """
     # Находим врача и пользователя
     patient = db.query(models.Patient)\
         .filter(models.Patient.id == patient_id)\
@@ -429,14 +428,16 @@ def delete_patient(
 
 
 @router.get("/doctors/search/{search_term}",
-            response_model=List[schemas.DoctorResponse],
-            summary="Поиск врачей")
+            response_model=List[schemas.DoctorResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
 def search_doctors(
     search_term: str,
     db: Session = Depends(get_db),
     current_admin = Depends(oauth2.get_current_admin)
 ):
+    """
+    Поиск доктора по фамилии\имени\отчеству\специализации
+    """
     doctors = db.query(models.Doctor)\
         .filter(
             (models.Doctor.first_name.ilike(f"%{search_term}%")) |
@@ -455,6 +456,9 @@ def search_doctors(
 @router.get("/doctors",response_model=List[schemas.DoctorResponseAdmin])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
 def get_doctors(db: Session = Depends(get_db),current_admin = Depends(oauth2.get_current_admin)):
+    """
+    Получение списка всех докторов
+    """
     doctors= db.query(models.Doctor).all()
     return doctors
 
@@ -463,6 +467,9 @@ def get_doctors(db: Session = Depends(get_db),current_admin = Depends(oauth2.get
 @exceptions.handle_exceptions(custom_message="Не удалось получить расписание доктора")
 def get_doctors_schedule(doctor_id: int,current_admin = Depends(oauth2.get_current_admin), 
                          db: Session = Depends(get_db)):
+    """
+    Получение расписания определенного врача
+    """
     doctor = db.query(models.Doctor).filter(models.Doctor.id == doctor_id).first()
     
     if not doctor:

@@ -22,7 +22,7 @@ def add_medicament_contradiction(
     db: Session = Depends(get_db)
 ):
     """
-    Добавление противопоказаний для лекарства.
+    Добавление противопоказаний для препарата.
     """
     medicament_name = request_data.medicament_name.capitalize()
     contradictions = [name.capitalize() for name in request_data.contradictions]
@@ -201,7 +201,7 @@ def add_medicaments_for_appointment(
     db: Session = Depends(get_db)
 ):
     """
-    Добавление лекарств пациенту на основе appointment ID.
+    Добавление лекарств пациенту..
     """
 
     for medicament in medicaments_data.medicaments:
@@ -445,7 +445,7 @@ def get_patient_active_medicaments(
     db: Session = Depends(get_db)
 ):
     """
-    Получение только активных лекарств пациента (без end_date или с end_date в будущем).
+    Получение только активных лекарств пациента.
     """
     patient = db.query(models.Patient)\
         .filter(models.Patient.id == patient_id)\
