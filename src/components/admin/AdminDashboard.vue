@@ -85,8 +85,6 @@ export default {
       recentActivities,
       todayAppointments,
       scheduledToday,
-      totalRevenue,
-      monthlyRevenue,
       initializeData
     } = useAdminData()
     onMounted(async () => {

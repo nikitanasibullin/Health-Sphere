@@ -34,9 +34,9 @@ import AppLayout from './common/AppLayout.vue'
 import PatientDashboard from './patient/PatientDashboard.vue'
 import PatientBookAppointment from './patient/PatientBookAppointment.vue'
 import PatientAppointments from './patient/PatientAppointments.vue'
-import PatientHistory from './patient/PatientHistory.vue'
+//import PatientHistory from './patient/PatientHistory.vue'
 import PatientPrescriptions from './patient/PatientPrescriptions.vue'
-import { useHospitalData } from '../composables/useHospitalData'
+import { usePatientData } from '../composables/usePatientData'
 
 export default {
   name: 'PatientPage',
@@ -45,12 +45,12 @@ export default {
     PatientDashboard,
     PatientBookAppointment,
     PatientAppointments,
-    PatientHistory,
+    //PatientHistory,
     PatientPrescriptions
   },
   setup() {
     const router = useRouter()
-    const { getPatientByEmail } = useHospitalData()
+    const { getPatientByEmail, logout } = usePatientData()
 
     const isLoading = ref(true)
     const currentUser = ref({ name: 'Patient', role: 'patient' })
@@ -61,7 +61,7 @@ export default {
       { id: 'dashboard', name: 'Dashboard', icon: 'fas fa-home' },
       { id: 'book', name: 'Book Appointment', icon: 'fas fa-calendar-plus' },
       { id: 'appointments', name: 'My Appointments', icon: 'fas fa-calendar-alt' },
-      { id: 'history', name: 'Medical History', icon: 'fas fa-file-medical-alt' },
+      //{ id: 'history', name: 'Medical History', icon: 'fas fa-file-medical-alt' },
       { id: 'prescriptions', name: 'Prescriptions', icon: 'fas fa-prescription-bottle' }
     ]
 
@@ -75,7 +75,7 @@ export default {
       dashboard: 'PatientDashboard',
       book: 'PatientBookAppointment',
       appointments: 'PatientAppointments',
-      history: 'PatientHistory',
+      //history: 'PatientHistory',
       prescriptions: 'PatientPrescriptions'
     }
 
@@ -102,7 +102,7 @@ export default {
     }
 
     const handleLogout = () => {
-      localStorage.removeItem('currentUser')
+      logout()
       router.push('/login')
     }
 
