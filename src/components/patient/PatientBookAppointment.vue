@@ -189,7 +189,7 @@ export default {
     const {
       doctors,
       addAppointment,
-      fetchDoctors,
+      initializeData,
       fetchDoctorSchedule
     } = usePatientData()
 
@@ -345,7 +345,7 @@ export default {
     }
 
     onMounted(async () => {
-      await fetchDoctors()
+      await initializeData()
     })
 
     return {

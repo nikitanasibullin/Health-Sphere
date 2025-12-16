@@ -180,7 +180,6 @@ export default {
       getPatientCompletedAppointments,
       getPatientPrescriptions,
       cancelAppointment,
-      addActivity
     } = usePatientData()
 
     const myAppointments = ref([])
@@ -207,7 +206,6 @@ export default {
     const handleCancelAppointment = async (appointmentId) => {
       if (confirm('Are you sure want to cancel this appointment?')) {
         await cancelAppointment(appointmentId)
-        addActivity('Appointment cancelled', 'fas fa-calendar-times', 'bg-red-500')
         upcomingAppointments.value = await getPatientUpcomingAppointments() || []
         myAppointments.value = await getPatientAppointments() || []
       }
