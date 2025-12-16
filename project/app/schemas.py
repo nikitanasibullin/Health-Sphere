@@ -116,7 +116,7 @@ class AppointmentResponseToPatient(BaseModel):
 class AppointmentResponse(BaseModel):
     schedule: ScheduleResponse
     patient: PatientResponse
-    information: str
+    information: Optional[str] = None 
     status: str
     id: int
 

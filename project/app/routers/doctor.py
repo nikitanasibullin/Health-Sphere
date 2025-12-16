@@ -373,31 +373,25 @@ def add_medicaments_for_appointment(
     
 # Получение всех записей на прием к текущему доктору
 @router.get("/appointments", response_model=List[schemas.AppointmentResponse])
-@exceptions.handle_exceptions(custom_message="Не удалось получить все записи на приём к текущему доктору")
+@exceptions.handle_exceptions(custom_message="Не удалось получить все записи на прием")
 def get_my_appointments(
-    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
     status_filter: Optional[str] = None,
+    current_doctor: models.Patient = Depends(oauth2.get_current_doctor),
     db: Session = Depends(get_db)
 ):
     """
-    Получение всех записей на прием к текущему доктору
+    Получение всех записей на прием текущего доктора
     """
-    # Получаем ID расписаний доктора
-    doctor_schedule_ids = db.query(models.Schedule.id)\
-        .filter(models.Schedule.doctor_id == current_doctor.id)\
-        .subquery()
-    
-    # Запрос на записи к доктору
-    query = db.query(models.Appointment)\
-        .filter(models.Appointment.schedule_id.in_(doctor_schedule_ids))
-    
+
+    appointments = db.query(models.Appointment)\
+         .join(models.Appointment.schedule)\
+         .filter(models.Schedule.doctor_id == current_doctor.id)
     if status_filter:
-        query = query.filter(models.Appointment.status == status_filter)
-    
-    appointments = query.order_by(models.Appointment.id.desc()).all()
-    
+        appointments = appointments.filter(models.Appointment.status == status_filter)
+    appointments = appointments.order_by(models.Appointment.id.desc()).all()
     return appointments
-        
+
+
 
 
 
