@@ -148,10 +148,15 @@ export const getPatientByEmail = (email) => {
 
 export const getDoctorName = (id) => {
   const doctor = state.doctors.find(d => d.id === id)
+  console.log(doctor)
   if (doctor) {
-    return `Dr. ${doctor.name}`.trim()
+    return `${doctor.name}`.trim()
   }
   return 'Unknown'
+}
+
+export const buildDoctorName = (doctor) => {
+  return `${doctor.first_name} ${doctor.last_name} ${doctor.patronymic}`
 }
 
 export const getDoctorById = (id) => {
@@ -196,6 +201,7 @@ export function useHospitalCore() {
     logout,
 
     // Getters
+    buildDoctorName,
     getPatientName,
     getPatientById,
     getPatientByEmail,

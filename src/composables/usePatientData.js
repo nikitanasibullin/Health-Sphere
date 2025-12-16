@@ -67,6 +67,7 @@ export function usePatientData() {
         ? `/api/patient/appointments?status_filter=${statusFilter}`
         : '/api/patient/appointments'
       const response = await http.get(url)
+      console.log(response.data)
       return response.data
     } catch (error) {
       console.error('Failed to fetch patient appointments:', error)
