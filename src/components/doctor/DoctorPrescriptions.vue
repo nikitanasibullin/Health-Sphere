@@ -6,32 +6,32 @@
         <h2 class="text-3xl font-bold text-gray-800">
           <i class="fas fa-prescription text-green-500 mr-2"></i>Prescriptions
         </h2>
-        <button 
-          @click="showAddModal = true" 
+        <button
+          @click="showAddModal = true"
           class="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-teal-700 shadow-lg transition"
         >
           <i class="fas fa-plus mr-2"></i>New Prescription
         </button>
       </div>
-      
+
       <!-- Search -->
       <div class="mb-6">
         <div class="relative">
           <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-          <input 
-            v-model="search" 
-            type="text" 
+          <input
+            v-model="search"
+            type="text"
             placeholder="Search prescriptions..."
             class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
           >
         </div>
       </div>
-      
+
       <!-- Prescriptions Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
-          v-for="prescription in filteredPrescriptions" 
-          :key="prescription.id" 
+        <div
+          v-for="prescription in filteredPrescriptions"
+          :key="prescription.id"
           class="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition card-hover"
         >
           <div class="flex justify-between items-start mb-4">
@@ -43,12 +43,12 @@
               Active
             </span>
           </div>
-          
+
           <div class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4 mb-4">
             <p class="text-sm font-semibold text-gray-700 mb-1">Medication:</p>
             <p class="text-gray-800 font-medium">{{ prescription.medication }}</p>
           </div>
-          
+
           <div class="space-y-2 text-sm">
             <p class="text-gray-600">
               <strong class="text-gray-700">Dosage:</strong> {{ prescription.dosage }}
@@ -60,15 +60,15 @@
               <strong class="text-gray-700">Notes:</strong> {{ prescription.notes }}
             </p>
           </div>
-          
+
           <div class="flex gap-2 mt-4">
-            <button 
+            <button
               @click="editPrescription(prescription)"
               class="flex-1 bg-blue-100 text-blue-700 py-2 rounded-lg hover:bg-blue-200 transition"
             >
               <i class="fas fa-edit mr-1"></i>Edit
             </button>
-            <button 
+            <button
               @click="printPrescription(prescription)"
               class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition"
             >
@@ -76,17 +76,17 @@
             </button>
           </div>
         </div>
-        
+
         <div v-if="filteredPrescriptions.length === 0" class="col-span-full text-center py-12 text-gray-500">
           <i class="fas fa-prescription text-4xl mb-4"></i>
           <p>No prescriptions found</p>
         </div>
       </div>
     </div>
-    
+
     <!-- Add/Edit Prescription Modal -->
-    <div 
-      v-if="showAddModal || showEditModal" 
+    <div
+      v-if="showAddModal || showEditModal"
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="closeModals"
     >
@@ -99,13 +99,13 @@
             <i class="fas fa-times text-xl"></i>
           </button>
         </div>
-        
+
         <form @submit.prevent="handleSubmit">
           <div class="space-y-4">
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Patient</label>
-              <select 
-                v-model="form.patientId" 
+              <select
+                v-model="form.patientId"
                 required
                 :disabled="showEditModal"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100"
@@ -116,60 +116,60 @@
                 </option>
               </select>
             </div>
-            
+
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Medication</label>
-              <input 
-                v-model="form.medication" 
-                type="text" 
+              <input
+                v-model="form.medication"
+                type="text"
                 required
                 placeholder="e.g., Lisinopril 10mg"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
             </div>
-            
+
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Dosage</label>
-              <input 
-                v-model="form.dosage" 
-                type="text" 
+              <input
+                v-model="form.dosage"
+                type="text"
                 required
                 placeholder="e.g., 1 tablet twice daily"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
             </div>
-            
+
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Duration</label>
-              <input 
-                v-model="form.duration" 
-                type="text" 
+              <input
+                v-model="form.duration"
+                type="text"
                 required
                 placeholder="e.g., 30 days"
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               >
             </div>
-            
+
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Notes (Optional)</label>
-              <textarea 
-                v-model="form.notes" 
+              <textarea
+                v-model="form.notes"
                 rows="3"
                 placeholder="Additional instructions..."
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               ></textarea>
             </div>
           </div>
-          
+
           <div class="flex gap-4 mt-6">
-            <button 
+            <button
               type="button"
               @click="closeModals"
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg hover:from-green-700 hover:to-teal-700 transition"
             >
@@ -195,23 +195,23 @@ export default {
     }
   },
   setup(props) {
-    const { 
-      getPatientName, 
+    const {
+      getPatientName,
       getDoctorPatients,
-      getDoctorPrescriptions, 
-      addPrescription, 
+      getDoctorPrescriptions,
+      addPrescription,
       updatePrescription,
-      addActivity 
+      addActivity
     } = useHospitalData()
-    
+
     const myPatients = getDoctorPatients(props.doctorId)
     const myPrescriptions = getDoctorPrescriptions(props.doctorId)
-    
+
     const search = ref('')
     const showAddModal = ref(false)
     const showEditModal = ref(false)
     const editingId = ref(null)
-    
+
     const form = ref({
       patientId: '',
       medication: '',
@@ -219,16 +219,16 @@ export default {
       duration: '',
       notes: ''
     })
-    
+
     const filteredPrescriptions = computed(() => {
       if (!search.value) return myPrescriptions.value
       const searchLower = search.value.toLowerCase()
-      return myPrescriptions.value.filter(p => 
+      return myPrescriptions.value.filter(p =>
         getPatientName(p.patientId).toLowerCase().includes(searchLower) ||
         p.medication.toLowerCase().includes(searchLower)
       )
     })
-    
+
     const resetForm = () => {
       form.value = {
         patientId: '',
@@ -239,19 +239,19 @@ export default {
       }
       editingId.value = null
     }
-    
+
     const closeModals = () => {
       showAddModal.value = false
       showEditModal.value = false
       resetForm()
     }
-    
+
     const editPrescription = (prescription) => {
       form.value = { ...prescription }
       editingId.value = prescription.id
       showEditModal.value = true
     }
-    
+
     const handleSubmit = () => {
       if (showEditModal.value && editingId.value) {
         updatePrescription(editingId.value, {
@@ -274,11 +274,11 @@ export default {
       }
       closeModals()
     }
-    
+
     const printPrescription = (prescription) => {
       alert(`Printing prescription for ${getPatientName(prescription.patientId)}\n\nMedication: ${prescription.medication}\nDosage: ${prescription.dosage}\nDuration: ${prescription.duration}`)
     }
-    
+
     return {
       search,
       showAddModal,
