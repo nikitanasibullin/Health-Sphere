@@ -9,7 +9,7 @@ from datetime import timedelta
 from datetime import date
 
 router = APIRouter(
-    prefix = "/doctor",
+    prefix = "/api/doctor",
     tags=['doctor']
 )
 
@@ -23,8 +23,8 @@ def add_medicament_contradiction(
     Добавление противопоказаний для лекарства.
     """
     try:
-        medicament_name = request_data.medicament_name
-        contradictions = request_data.contradictions
+        medicament_name = request_data.medicament_name.capitalize()
+        contradictions = [name.capitalize() for name in request_data.contradictions]
         added_count = 0
         
         for contradiction in contradictions:
@@ -42,7 +42,7 @@ def add_medicament_contradiction(
             
             db_contradiction = models.Contradiction(
                 medicament_name=medicament_name,
-                contradiction=contradiction
+                contradiction=contradiction.capitalize()
             )
             
             db.add(db_contradiction)
@@ -121,8 +121,8 @@ def delete_medicament_contradiction(
     Удаление конкретного противопоказания для лекарства.
     """
     try:
-        medicament_name = request_data.medicament_name
-        contradiction = request_data.contradictions
+        medicament_name = request_data.medicament_name.capitalize()
+        contradiction = request_data.contradictions.capitalize()
         
         db_contradiction = db.query(models.Contradiction)\
             .filter(
@@ -232,6 +232,10 @@ def add_medicaments_for_appointment(
     Добавление лекарств пациенту на основе appointment ID.
     """
     try:
+
+        for medicament in medicaments_data.medicaments:
+            if medicament.medicament_name:
+                medicament.medicament_name = medicament.medicament_name.strip().capitalize()
         # Получаем запись на прием
         db_appointment = db.query(models.Appointment)\
             .filter(models.Appointment.id == appointment_id)\
@@ -306,7 +310,7 @@ def add_medicaments_for_appointment(
                 if patient_medicaments:
                     specific_contradictions = db.query(models.Contradiction)\
                         .filter(
-                            models.Contradiction.medicament_name.in_([pm.medicament_name for pm in patient_medicaments]),
+                            models.Contradiction.medicament_name.in_([pm.medicament_name.capitalize() for pm in patient_medicaments]),
                             models.Contradiction.contradiction == medicament_data.medicament_name
                         )\
                         .all()
@@ -323,7 +327,7 @@ def add_medicaments_for_appointment(
             # Если проверки прошли успешно - создаем запись
             db_medicament = models.PatientMedicament(
                 patient_id=db_appointment.patient_id,
-                medicament_name=medicament_data.medicament_name,
+                medicament_name=medicament_data.medicament_name.capitalize(),
                 dosage=medicament_data.dosage,
                 frequency=medicament_data.frequency,
                 start_date=medicament_data.start_date,
@@ -349,7 +353,7 @@ def add_medicaments_for_appointment(
             )
 
         # Обновляем информацию о назначении в записи приема
-        medicament_names = [m.medicament_name for m in added_medicaments]
+        medicament_names = [m.medicament_name.capitalize() for m in added_medicaments]
         info_text = f"Назначены лекарства: {', '.join(medicament_names)} (назначил: Dr. {current_doctor.last_name})"
 
         # Добавляем предупреждения о конфликтах, если они есть
@@ -615,4 +619,165 @@ def get_patient_medication_report(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ошибка при получении отчета: {str(e)}"
+        )
+    
+
+@router.post("/patients/{patient_id}/contraindications", response_model=dict)
+def add_patient_contradictions(
+    patient_id: int,
+    request_data: schemas.PatientContraindicationsRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Добавление противопоказаний пациенту.
+    Доктор может добавлять противопоказания любому пациенту.
+    """
+    try:
+        # Проверяем существование пациента
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пациент с ID {patient_id} не найден"
+            )
+        
+        contradictions = [name.capitalize() for name in request_data.contradictions]
+        added_count = 0
+        already_exist = []
+        
+        for contradiction in contradictions:
+            # Проверяем, существует ли уже такое противопоказание для пациента
+            existing = db.query(models.PatientContradiction)\
+                .filter(
+                    and_(
+                        models.PatientContradiction.patient_id == patient_id,
+                        models.PatientContradiction.contradiction == contradiction
+                    )
+                )\
+                .first()
+            
+            if existing:
+                already_exist.append(contradiction)
+                continue
+            
+            # Создаем новое противопоказание
+            db_contradiction = models.PatientContradiction(
+                patient_id=patient_id,
+                contradiction=contradiction
+            )
+            
+            db.add(db_contradiction)
+            added_count += 1
+        
+        if added_count > 0 or already_exist:
+            db.commit()
+            
+            response = {
+                "status": "success",
+                "message": f"Обработка противопоказаний пациента завершена",
+                "patient_id": patient_id,
+                "patient_name": f"{patient.last_name} {patient.first_name}",
+                "added_by_doctor": f"Dr. {current_doctor.last_name}"
+            }
+            
+            if added_count > 0:
+                response["added_count"] = added_count
+                response["added_contradictions"] = [c for c in contradictions if c not in already_exist]
+            
+            if already_exist:
+                response["already_exist"] = already_exist
+            
+            return response
+        else:
+            return {
+                "status": "info",
+                "message": "Нет противопоказаний для добавления",
+                "patient_id": patient_id
+            }
+            
+    except IntegrityError as e:
+        db.rollback()
+        if "check_contradiction_name_length" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Название противопоказания должно быть от 1 до 100 символов"
+            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ошибка целостности данных: {str(e)}"
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при добавлении противопоказаний: {str(e)}"
+        )
+    
+@router.delete("/patients/{patient_id}/contraindications", response_model=dict)
+def delete_patient_contradiction(
+    patient_id: int,
+    request_data: schemas.PatientContraindicationDeleteRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление конкретного противопоказания пациента.
+    """
+    try:
+        # Проверяем существование пациента
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == patient_id)\
+            .first()
+        
+        if not patient:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Пациент с ID {patient_id} не найден"
+            )
+        
+        contradiction = request_data.contradiction
+        
+        # Находим противопоказание
+        db_contradiction = db.query(models.PatientContradiction)\
+            .filter(
+                and_(
+                    models.PatientContradiction.patient_id == patient_id,
+                    models.PatientContradiction.contradiction == contradiction
+                )
+            )\
+            .first()
+        
+        if not db_contradiction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Противопоказание '{contradiction}' у пациента не найдено"
+            )
+        
+        # Удаляем противопоказание
+        db.delete(db_contradiction)
+        db.commit()
+        
+        return {
+            "status": "success",
+            "message": f"Противопоказание '{contradiction}' удалено у пациента",
+            "patient_id": patient_id,
+            "patient_name": f"{patient.last_name} {patient.first_name}",
+            "deleted_by_doctor": f"Dr. {current_doctor.last_name}"
+        }
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при удалении противопоказания: {str(e)}"
         )
