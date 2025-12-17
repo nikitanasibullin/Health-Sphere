@@ -528,6 +528,21 @@ def search_doctors(
     return doctors
 
 
+@router.get("/doctors",
+            response_model=List[schemas.DoctorResponse])
+@exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
+def search_doctors(
+    db: Session = Depends(get_db),
+    current_admin = Depends(oauth2.get_current_admin)
+):
+    """
+    Поиск доктора по фамилии\имени\отчеству\специализации
+    """
+    doctors = db.query(models.Doctor).all()
+    
+    return doctors
+
+
 
 @router.get("/doctors",response_model=List[schemas.DoctorResponseAdmin])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список докторов")
