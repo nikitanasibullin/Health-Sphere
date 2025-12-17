@@ -40,6 +40,7 @@ class SpecializationResponse(BaseModel):
         from_attributes = True
 
 class DoctorResponse(BaseModel):
+    id: int
     first_name: str
     last_name: str
     patronymic: str
@@ -47,6 +48,19 @@ class DoctorResponse(BaseModel):
 
     class Config: 
         from_attributes = True
+
+class DoctorResponseAdmin(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    patronymic: str
+    email: str
+    phone_number: str
+    specialization: SpecializationResponse
+
+    class Config: 
+        from_attributes = True
+
 
 
 class DoctorCreate(BaseModel):
@@ -69,6 +83,7 @@ class ScheduleResponse(BaseModel):
     start_time: time
     end_time: time
     doctor: DoctorResponse
+    is_available: bool
 
 class ScheduleCreate(BaseModel):
     office_number:Annotated[str,Field(min_length=1,max_length=10)]
@@ -101,7 +116,7 @@ class AppointmentResponseToPatient(BaseModel):
 class AppointmentResponse(BaseModel):
     schedule: ScheduleResponse
     patient: PatientResponse
-    information: str
+    information: Optional[str] = None 
     status: str
     id: int
 
