@@ -518,7 +518,7 @@ def search_doctors(
         .filter(
             (models.Doctor.first_name.ilike(f"%{search_term}%")) |
             (models.Doctor.last_name.ilike(f"%{search_term}%")) |
-            (models.Doctor.middle_name.ilike(f"%{search_term}%")) |
+            (models.Doctor.patronymic.ilike(f"%{search_term}%")) |
             (models.Doctor.specialization.has(
                 models.Specialization.name.ilike(f"%{search_term}%")
             ))

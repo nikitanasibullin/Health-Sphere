@@ -370,6 +370,185 @@ def add_medicaments_for_appointment(
     
     return response
 
+
+@router.put("/appointments/{appointment_id}/medicaments", response_model=schemas.MedicamentsAppointmentResponse)
+@exceptions.handle_exceptions(custom_message="Не удалось добавить лекарство")
+def add_medicaments_for_appointment(
+    appointment_id: int,
+    medicaments_data: schemas.MedicamentsForAppointmentRequest,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),  # ← Добавлено
+    db: Session = Depends(get_db)
+):
+    """
+    Добавление лекарств пациенту..
+    """
+
+    for medicament in medicaments_data.medicaments:
+        if medicament.medicament_name:
+            medicament.medicament_name = medicament.medicament_name.strip().capitalize()
+    # Получаем запись на прием
+    db_appointment = db.query(models.Appointment)\
+        .filter(models.Appointment.id == appointment_id)\
+        .first()
+    
+    if not db_appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Запись на прием с ID {appointment_id} не найдена"
+        )
+    
+    # Проверяем, что запись относится к текущему доктору
+    schedule = db.query(models.Schedule)\
+        .filter(models.Schedule.id == db_appointment.schedule_id)\
+        .first()
+    
+    if not schedule or schedule.doctor_id != current_doctor.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Эта запись не относится к вашему расписанию"
+        )
+    
+    # Получаем ВСЕ противопоказания пациента
+    patient_contradictions = db.query(models.PatientContradiction)\
+        .filter(models.PatientContradiction.patient_id == db_appointment.patient_id)\
+        .all()
+    
+    # Получаем ВСЕ лекарства пациента
+    patient_medicaments = db.query(models.PatientMedicament)\
+        .filter(models.PatientMedicament.patient_id == db_appointment.patient_id)\
+        .all()
+    
+    # Собираем ОБЩИЙ список противопоказаний пациента
+    all_patient_contraindications = set()
+    
+    # Добавляем прямые противопоказания
+    for pc in patient_contradictions:
+        all_patient_contraindications.add(pc.contradiction)
+    
+    # Добавляем названия лекарств, которые уже принимает пациент
+    for pm in patient_medicaments:
+        all_patient_contraindications.add(pm.medicament_name)
+    
+    # Получаем противопоказания для всех лекарств пациента
+    if patient_medicaments:
+        patient_medicament_names = [pm.medicament_name for pm in patient_medicaments]
+        
+        medicament_contradictions = db.query(models.Contradiction)\
+            .filter(models.Contradiction.medicament_name.in_(patient_medicament_names))\
+            .all()
+        
+        for mc in medicament_contradictions:
+            all_patient_contraindications.add(mc.contradiction)
+    
+    added_medicaments = []
+    conflicted_medicaments = []
+    
+    for medicament_data in medicaments_data.medicaments:
+        # ПРОВЕРКА: Является ли новое лекарство противопоказанием для пациента?
+        if medicament_data.medicament_name in all_patient_contraindications:
+            conflict_reasons = []
+            
+            # Проверяем все возможные причины
+            for pc in patient_contradictions:
+                if pc.contradiction == medicament_data.medicament_name:
+                    conflict_reasons.append(f"Прямое противопоказание: пациент не переносит '{medicament_data.medicament_name}'")
+            
+            for pm in patient_medicaments:
+                if pm.medicament_name == medicament_data.medicament_name:
+                    conflict_reasons.append(f"Пациент уже принимает это лекарство (назначено {pm.start_date})")
+            
+            if patient_medicaments:
+                specific_contradictions = db.query(models.Contradiction)\
+                    .filter(
+                        models.Contradiction.medicament_name.in_([pm.medicament_name.capitalize() for pm in patient_medicaments]),
+                        models.Contradiction.contradiction == medicament_data.medicament_name
+                    )\
+                    .all()
+                
+                for sc in specific_contradictions:
+                    conflict_reasons.append(f"Нельзя назначать '{medicament_data.medicament_name}' вместе с '{sc.medicament_name}'")
+            
+            conflicted_medicaments.append({
+                "medicament_name": medicament_data.medicament_name,
+                "conflict_reasons": conflict_reasons if conflict_reasons else ["Общее противопоказание"]
+            })
+            continue
+        
+        # Если проверки прошли успешно - создаем запись
+        db_medicament = models.PatientMedicament(
+            patient_id=db_appointment.patient_id,
+            medicament_name=medicament_data.medicament_name.capitalize(),
+            dosage=medicament_data.dosage,
+            frequency=medicament_data.frequency,
+            start_date=medicament_data.start_date,
+            end_date=medicament_data.end_date,
+            prescribed_by=f"Dr. {current_doctor.last_name} {current_doctor.first_name[0]}.",  # ← Используем current_doctor
+            notes=medicament_data.notes
+        )
+        
+        db.add(db_medicament)
+        added_medicaments.append(db_medicament)
+    
+    # Если НИ ОДНО лекарство не было добавлено
+    if not added_medicaments:
+        error_message = "Ни одно лекарство не было добавлено из-за медицинских противопоказаний:\n"
+        for conflict in conflicted_medicaments:
+            error_message += f"- {conflict['medicament_name']}:\n"
+            for reason in conflict['conflict_reasons']:
+                error_message += f"  • {reason}\n"
+        
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error_message.strip()
+        )
+
+    # Обновляем информацию о назначении в записи приема
+    medicament_names = [m.medicament_name.capitalize() for m in added_medicaments]
+    info_text = f"Назначены лекарства: {', '.join(medicament_names)} (назначил: Dr. {current_doctor.last_name})"
+
+    # Добавляем предупреждения о конфликтах, если они есть
+    warning_message = None
+    success_message = None
+    if conflicted_medicaments:
+        warning_text = "\n\nВНИМАНИЕ: Следующие лекарства не были назначены из-за противопоказаний:\n"
+        for conflict in conflicted_medicaments:
+            warning_text += f"- {conflict['medicament_name']}:\n"
+            for reason in conflict['conflict_reasons']:
+                warning_text += f"  • {reason}\n"
+        info_text += warning_text
+        
+        warning_message = f"{len(conflicted_medicaments)} лекарств не были назначены из-за противопоказаний"
+        success_message = f"Успешно добавлено {len(added_medicaments)} лекарств"
+    else:
+        success_message = f"Все {len(added_medicaments)} лекарств успешно добавлены"
+
+    # Обновляем информацию в записи приема
+    if db_appointment.information:
+        db_appointment.information = db_appointment.information + "\n\n" + info_text
+    else:
+        db_appointment.information = info_text
+
+    db.commit()
+
+    # Обновляем объекты
+    for medicament in added_medicaments:
+        db.refresh(medicament)
+
+    # Подготавливаем ответ
+    response = schemas.MedicamentsAppointmentResponse(
+        added_medicaments=[schemas.PatientMedicamentResponse.from_orm(m) for m in added_medicaments],
+        conflicts=[
+            schemas.MedicamentConflictResponse(
+                medicament_name=conflict["medicament_name"],
+                conflict_reasons=conflict["conflict_reasons"]
+            ) for conflict in conflicted_medicaments
+        ],
+        warning=warning_message,
+        message=success_message
+    )
+    
+    return response
+
     
 # Получение всех записей на прием к текущему доктору
 @router.get("/appointments", response_model=List[schemas.AppointmentResponse])
