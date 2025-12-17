@@ -184,7 +184,7 @@
 
 <script>
 import { ref, computed } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useDoctorData } from '../../composables/useDoctorData'
 
 export default {
   name: 'DoctorPrescriptions',
@@ -202,7 +202,7 @@ export default {
       addPrescription,
       updatePrescription,
       addActivity
-    } = useHospitalData()
+    } = useDoctorData()
 
     const myPatients = getDoctorPatients(props.doctorId)
     const myPrescriptions = getDoctorPrescriptions(props.doctorId)

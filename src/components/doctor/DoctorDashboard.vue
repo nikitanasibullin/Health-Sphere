@@ -130,7 +130,7 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useDoctorData } from '../../composables/useDoctorData'
 
 export default {
   name: 'DoctorDashboard',
@@ -147,7 +147,7 @@ export default {
       getDoctorTodayAppointments,
       getDoctorPatients,
       getDoctorPrescriptions
-    } = useHospitalData()
+    } = useDoctorData()
 
     const myAppointments = ref([])
     const todaysAppointments = ref([])

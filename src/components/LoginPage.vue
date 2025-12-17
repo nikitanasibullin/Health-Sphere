@@ -98,7 +98,7 @@
 
 <script>
 
-import { useHospitalData } from '../composables/useHospitalData'
+import { useHospitalCore } from '../composables/useHospitalCore'
 export default {
   name: 'LoginPage',
   data() {
@@ -118,7 +118,7 @@ export default {
   },
   methods: {
     async handleLogin() {
-      const { login } = useHospitalData()
+      const { login } = useHospitalCore()
       const response = await login(this.form.email, this.form.password)
       console.log(response)
       const currentUser = {

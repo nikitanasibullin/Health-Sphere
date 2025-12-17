@@ -38,12 +38,12 @@
 </template>
 
 <script>
-import { useHospitalData } from '../../composables/useHospitalData.js'
+import { useAdminData } from '../../composables/useAdminData'
 
 export default {
   name: 'AdminRecords',
   setup() {
-    const { medicalRecords, getPatientName, getDoctorName } = useHospitalData()
+    const { medicalRecords, getPatientName, getDoctorName } = useAdminData()
 
     return {
       medicalRecords,
