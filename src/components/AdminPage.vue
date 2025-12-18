@@ -30,7 +30,7 @@ import AdminDashboard from './admin/AdminDashboard.vue'
 import AdminPatients from './admin/AdminPatients.vue'
 import AdminDoctors from './admin/AdminDoctors.vue'
 import AdminAppointments from './admin/AdminAppointments.vue'
-import AdminRecords from './admin/AdminRecords.vue'
+//import AdminRecords from './admin/AdminRecords.vue'
 //import AdminBilling from './admin/AdminBilling.vue'
 import AdminSchedule from './admin/AdminSchedule.vue'  // NEW
 
@@ -42,7 +42,7 @@ export default {
     AdminPatients,
     AdminDoctors,
     AdminAppointments,
-    AdminRecords,
+    //AdminRecords,
     //AdminBilling,
     AdminSchedule  // NEW
   },
@@ -59,7 +59,7 @@ export default {
       { id: 'doctors', name: 'Doctors', icon: 'fas fa-user-md' },
       { id: 'schedule', name: 'Schedules', icon: 'fas fa-calendar-alt' },  // NEW
       { id: 'appointments', name: 'Appointments', icon: 'fas fa-calendar-check' },
-      { id: 'records', name: 'Records', icon: 'fas fa-file-medical' },
+      //{ id: 'records', name: 'Records', icon: 'fas fa-file-medical' },
       //{ id: 'billing', name: 'Billing', icon: 'fas fa-file-invoice-dollar' }
     ]
 

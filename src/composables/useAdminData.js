@@ -29,7 +29,25 @@ export function useAdminData() {
       state.loading.patients = false
     }
   }
-
+  const fetchAdminDoctorSchedule = async (doctorId) => {
+        try {
+            const response = await http.get(`/api/admin/schedule/${doctorId}`)
+            return response.data.map(schedule => ({
+                id: schedule.id,
+                doctor_id: schedule.doctor_id,
+                date: schedule.date,
+                startTime: schedule.start_time,
+                endTime: schedule.end_time,
+                appointmentCount: schedule.slots_count,
+                bookedCount: schedule.booked_count || 0,
+                officeNumber: schedule.office_number,
+                isActive: schedule.is_available ?? true
+            }))
+        } catch (error) {
+            console.error(`Failed to fetch schedule for doctor ${doctorId}:`, error)
+            return []
+        }
+    }
   const fetchDoctors = async () => {
     try {
       state.loading.doctors = true
@@ -387,6 +405,7 @@ export function useAdminData() {
 
     // Billing
     addBilling,
-    markBillingPaid
+    markBillingPaid,
+    fetchAdminDoctorSchedule
   }
 }
