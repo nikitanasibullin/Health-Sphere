@@ -85,6 +85,7 @@ export default {
       recentActivities,
       todayAppointments,
       scheduledToday,
+      fetchAdminDoctorSchedule,
       initializeData
     } = useAdminData()
     onMounted(async () => {
@@ -98,7 +99,7 @@ export default {
       recentActivities,
       todayAppointments,
       scheduledToday,
-
+      fetchAdminDoctorSchedule
     }
   },
 }

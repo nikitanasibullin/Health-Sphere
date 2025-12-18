@@ -48,7 +48,7 @@
                   <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-teal-400 rounded-full flex items-center justify-center mr-3">
                     <span class="text-white font-bold">{{ doctor.name.charAt(0) }}</span>
                   </div>
-                  <span class="font-semibold text-gray-900">{{ doctor.name }}</span>
+                  <span class="font-semibold text-gray-900">{{doctor.name }}</span>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ doctor.email }}</td>
@@ -57,7 +57,7 @@
                   {{ doctor.specialization }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ doctor.phone }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-gray-700">{{ doctor.phone_number }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <button @click="handleDelete(doctor.id)" class="text-red-600 hover:text-red-800" title="Delete">
                   <i class="fas fa-trash"></i>

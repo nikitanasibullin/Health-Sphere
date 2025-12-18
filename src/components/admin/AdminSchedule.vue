@@ -223,7 +223,7 @@
 </template>
 <script>
 import { ref, onMounted } from 'vue'
-import { useHospitalData } from '../../composables/useHospitalData'
+import { useAdminData } from '../../composables/useAdminData'
 
 export default {
   name: 'AdminSchedule',
@@ -234,7 +234,7 @@ export default {
       fetchAdminDoctorSchedule,
       addScheduleBatch,
       deleteSchedule
-    } = useHospitalData()
+    } = useAdminData()
 
     const doctorSchedules = ref([])
     const expandedDoctors = ref([])
