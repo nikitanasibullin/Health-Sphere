@@ -110,22 +110,7 @@
           </div>
         </div>
 
-        <!-- Reason -->
-        <div class="mb-6">
-          <label class="block text-gray-700 font-semibold mb-2">
-            <i class="fas fa-notes-medical mr-2 text-blue-500"></i>Reason for Visit
-          </label>
-          <textarea
-            v-model="form.reason"
-            rows="4"
-            required
-            placeholder="Please describe the reason for your visit..."
-            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          ></textarea>
-          <p v-if="errors.reason" class="text-red-500 text-sm mt-2">
-            <i class="fas fa-exclamation-circle mr-1"></i>{{ errors.reason }}
-          </p>
-        </div>
+
 
         <!-- Selected Appointment Summary -->
         <div v-if="selectedSlot" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -195,8 +180,7 @@ export default {
 
     const form = ref({
       doctorId: null,
-      date: '',
-      reason: ''
+      date: ''
     })
 
     // Schedule data
@@ -306,9 +290,6 @@ export default {
       }
       if (!selectedSlot.value) {
         errors.value.time = 'Please select a time'
-      }
-      if (!form.value.reason || form.value.reason.trim().length < 10) {
-        errors.value.reason = 'Please provide a reason (at least 10 characters)'
       }
 
       return Object.keys(errors.value).length === 0
