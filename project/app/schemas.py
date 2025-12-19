@@ -39,6 +39,16 @@ class SpecializationResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class OfficeCreate(BaseModel):
+    number: str = Field(..., min_length=1, max_length=15, description="Номер офиса/кабинета")
+
+class OfficeResponse(BaseModel):
+    id: int
+    number: str
+    
+    class Config:
+        from_attributes = True
+
 class DoctorResponse(BaseModel):
     id: int
     first_name: str
@@ -78,7 +88,7 @@ class SpecializationCreate(BaseModel):
 
 class ScheduleResponse(BaseModel):
     id: int
-    office_number: str
+    office: OfficeResponse
     date : date
     start_time: time
     end_time: time
@@ -99,7 +109,7 @@ class ScheduleBatchCreate(BaseModel):
     start_time: time
     end_time: time
     slots_count: int
-    office_number: str = None
+    office_id: int
     
     class Config:
         from_attributes = True
@@ -139,12 +149,11 @@ class AppointmentUpdate(BaseModel):
         return v
     
 class PatientMedicamentBase(BaseModel):
-    medicament_name: Annotated[str,constr(min_length=1,max_length=50)]
+    medicament_id: int
     dosage: Optional[str] = None
     frequency: Optional[str] = None
     start_date: Optional[date] = Field(default_factory=lambda: date.today())
     end_date: Optional[date] = None
-    prescribed_by: Optional[str] = None
     notes: Optional[str] = None
 
 class PatientMedicamentCreate(PatientMedicamentBase):
@@ -174,7 +183,8 @@ class PatientMedicamentResponse(BaseModel):
     frequency: Optional[str] = None
     start_date: date
     end_date: Optional[date] = None
-    prescribed_by: Optional[str] = None
+    doctor_id: int
+    appointment_id: int
     notes: Optional[str] = None
     
     class Config:
@@ -214,3 +224,23 @@ class PatientContraindicationsRequest(BaseModel):
 
 class PatientContraindicationDeleteRequest(BaseModel):
     contradiction: str
+
+
+class CreateWithName(BaseModel):
+    name: str
+
+class PatientContr(BaseModel):
+    patient_id: int
+    contraindication_id: int
+
+class PatientMedContr(BaseModel):
+    patient_id: int
+    contraindication_medicament_id: int
+
+class MedicamentContr(BaseModel):
+    medicament_id: int
+    contraindication_id: int
+
+class MedMedContr(BaseModel):
+    first_medicament_id: int
+    second_medicament_id: int
