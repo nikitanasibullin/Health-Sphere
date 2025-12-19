@@ -36,6 +36,7 @@ class SpecializationResponse(BaseModel):
 
     name: str
     id: int
+    description: Optional[str] = None 
     class Config:
         from_attributes = True
 

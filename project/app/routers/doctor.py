@@ -50,16 +50,7 @@ def update_appointment_info(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Эта запись не относится к вашему расписанию"
         )
-    
-    # Обновляем информацию
-    if update_data.information is not None:
-        # Добавляем подпись доктора
-        info_with_signature = f"{update_data.information}\n\n— Dr. {current_doctor.last_name} {current_doctor.first_name[0]}."
-        
-        if db_appointment.information:
-            db_appointment.information = db_appointment.information + "\n\n" + info_with_signature
-        else:
-            db_appointment.information = info_with_signature
+
     
     # Обновляем статус
     if update_data.status is not None:

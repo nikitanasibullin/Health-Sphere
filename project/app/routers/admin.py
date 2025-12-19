@@ -47,6 +47,47 @@ def create_specialization(
     
     return db_specialization
 
+@router.delete("/specializations/{specialization_id}", 
+               status_code=status.HTTP_204_NO_CONTENT)
+@exceptions.handle_exceptions(custom_message="Не удалось удалить специализацию")
+def delete_specialization(
+    specialization_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление специализации по ID.
+    Проверяет, есть ли врачи с этой специализацией перед удалением.
+    """
+    # Находим специализацию
+    specialization = db.query(models.Specialization)\
+        .filter(models.Specialization.id == specialization_id)\
+        .first()
+    
+    if not specialization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Специализация с ID {specialization_id} не найдена"
+        )
+    
+    # Проверяем, есть ли врачи с этой специализацией
+    doctors_count = db.query(models.Doctor)\
+        .filter(models.Doctor.specialization_id == specialization_id)\
+        .count()
+    
+    if doctors_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Невозможно удалить специализацию. "
+                   f"Найдено {doctors_count} врачей с этой специализацией. "
+        )
+    
+    # Удаляем специализацию
+    db.delete(specialization)
+    db.commit()
+    
+    return Response(status_code=204)
+
 @router.get("/patients",
             response_model=List[schemas.PatientResponse])
 @exceptions.handle_exceptions(custom_message="Не удалось получить список всех пациентов")
