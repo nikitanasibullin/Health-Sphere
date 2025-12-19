@@ -183,7 +183,8 @@ class PatientMedicamentResponse(BaseModel):
     frequency: Optional[str] = None
     start_date: date
     end_date: Optional[date] = None
-    prescribed_by: Optional[str] = None
+    doctor_id: int
+    appointment_id: int
     notes: Optional[str] = None
     
     class Config:
@@ -225,3 +226,21 @@ class PatientContraindicationDeleteRequest(BaseModel):
     contradiction: str
 
 
+class CreateWithName(BaseModel):
+    name: str
+
+class PatientContr(BaseModel):
+    patient_id: int
+    contraindication_id: int
+
+class PatientMedContr(BaseModel):
+    patient_id: int
+    contraindication_medicament_id: int
+
+class MedicamentContr(BaseModel):
+    medicament_id: int
+    contraindication_id: int
+
+class MedMedContr(BaseModel):
+    first_medicament_id: int
+    second_medicament_id: int
