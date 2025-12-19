@@ -1305,3 +1305,155 @@ def remove_patient_medication_contraindication(
         "patient_id": patient_id,
         "medicament_id": medicament_id
     }
+
+
+
+@router.post("/patient/other-contraindication", response_model=dict)
+@exceptions.handle_exceptions(custom_message="Не удалось добавить общее противопоказание пациента")
+def add_patient_other_contraindication(
+    data: dict,  # {"patient_id": 1, "contraindication_id": 2}
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Добавить общее противопоказание пациента
+    Принимает JSON: {"patient_id": 1, "contraindication_id": 2}
+    """
+    patient_id = data.get("patient_id")
+    contraindication_id = data.get("contraindication_id")
+    
+    if not patient_id or not contraindication_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Необходимо указать patient_id и contraindication_id"
+        )
+    
+    # Проверяем существование пациента
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    if not patient:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Пациент не найден"
+        )
+    
+    # Проверяем существование противопоказания
+    contraindication = db.query(models.OtherContraindication)\
+        .filter(models.OtherContraindication.id == contraindication_id)\
+        .first()
+    
+    if not contraindication:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Противопоказание не найдено"
+        )
+    
+    # Проверяем, нет ли уже такой записи
+    existing = db.query(models.PatientOtherContraindication)\
+        .filter(
+            models.PatientOtherContraindication.patient_id == patient_id,
+            models.PatientOtherContraindication.contraindication_id == contraindication_id
+        )\
+        .first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Такое противопоказание уже существует у пациента"
+        )
+    
+    # Создаем запись
+    new_record = models.PatientOtherContraindication(
+        patient_id=patient_id,
+        contraindication_id=contraindication_id
+    )
+    
+    db.add(new_record)
+    db.commit()
+    
+    return {
+        "message": f"Добавлено противопоказание: пациент '{patient.id}' имеет противопоказание: '{contraindication.name}'",
+        "patient_id": patient_id,
+        "contraindication_id": contraindication_id
+    }
+
+
+@router.get("/patient/other-contraindication/{patient_id}", response_model=List[dict])
+@exceptions.handle_exceptions(custom_message="Не удалось получить общие противопоказания пациента")
+def get_patient_other_contraindications(
+    patient_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Получить все общие противопоказания пациента
+    """
+    # Делаем join с таблицами patient и other_contraindication
+    results = db.query(
+        models.PatientOtherContraindication,
+        models.Patient,
+        models.OtherContraindication
+    )\
+    .join(models.Patient, models.PatientOtherContraindication.patient_id == models.Patient.id)\
+    .join(models.OtherContraindication, models.PatientOtherContraindication.contraindication_id == models.OtherContraindication.id)\
+    .filter(models.PatientOtherContraindication.patient_id == patient_id)\
+    .all()
+    
+    return [
+        {
+            "patient_id": patient.id,
+            "patient_name": patient.first_name,
+            "contraindication_id": contraindication.id,
+            "contraindication_name": contraindication.name,
+        }
+        for record, patient, contraindication in results
+    ]
+
+
+@router.delete("/patient/other-contraindication", response_model=dict)
+@exceptions.handle_exceptions(custom_message="Не удалось удалить общее противопоказание пациента")
+def remove_patient_other_contraindication(
+    data: dict,  # {"patient_id": 1, "contraindication_id": 2}
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Удалить общее противопоказание пациента
+    Принимает JSON: {"patient_id": 1, "contraindication_id": 2}
+    """
+    patient_id = data.get("patient_id")
+    contraindication_id = data.get("contraindication_id")
+    
+    if not patient_id or not contraindication_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Необходимо указать patient_id и contraindication_id"
+        )
+    
+    # Ищем запись
+    record = db.query(models.PatientOtherContraindication)\
+        .filter(
+            models.PatientOtherContraindication.patient_id == patient_id,
+            models.PatientOtherContraindication.contraindication_id == contraindication_id
+        )\
+        .first()
+    
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Противопоказание не найдено"
+        )
+    
+    # Получаем названия для сообщения
+    patient = db.query(models.Patient).filter(models.Patient.id == patient_id).first()
+    contraindication = db.query(models.OtherContraindication)\
+        .filter(models.OtherContraindication.id == contraindication_id)\
+        .first()
+    
+    db.delete(record)
+    db.commit()
+    
+    return {
+        "message": f"Удалено противопоказание: пациент '{patient.first_name}' не имеет '{contraindication.name}'",
+        "patient_id": patient_id,
+        "contraindication_id": contraindication_id
+    }

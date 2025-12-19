@@ -43,7 +43,7 @@ class Patient(Base):
     )
     
     other_contraindications = relationship(
-        "PatientOtherContradictions", 
+        "PatientOtherContraindication", 
         cascade="all, delete-orphan"
     )
 
@@ -267,7 +267,7 @@ class PatientMedicamentContraindication(Base):
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
 
-class PatientOtherContradictions(Base):
+class PatientOtherContraindication(Base):
     __tablename__ = "patient_other_contradictions"
     
     patient_id = Column(Integer, ForeignKey('patient.id'), primary_key=True)
