@@ -286,7 +286,7 @@ def create_schedule_batch(
         # Создаем слот
         db_slot = models.Schedule(
             doctor_id=schedule.doctor_id,
-            office_number=schedule.office_number,
+            office_id=schedule.office_id,
             date=schedule.date,
             start_time=slot_start_time,
             end_time=slot_end_time,
@@ -580,3 +580,95 @@ def get_doctors_schedule(doctor_id: int,current_admin = Depends(oauth2.get_curre
     ).all()
     
     return schedules
+
+
+
+@router.post("/offices", 
+             response_model=schemas.OfficeResponse,
+             status_code=status.HTTP_201_CREATED)
+@exceptions.handle_exceptions(custom_message="Не удалось создать офис")
+def create_office(
+    office: schemas.OfficeCreate,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Создать новый офис/кабинет.
+    """
+    
+    # Проверяем, существует ли уже такой офис
+    existing = db.query(models.Office)\
+        .filter(models.Office.number.ilike(office.number))\
+        .first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Офис с таким номером уже существует"
+        )
+    
+    # Создаем новый офис
+    db_office = models.Office(
+        number=office.number
+    )
+    
+    db.add(db_office)
+    db.commit()
+    db.refresh(db_office)
+    
+    return db_office
+
+
+@router.get("/offices",
+            response_model=List[schemas.OfficeResponse])
+@exceptions.handle_exceptions(custom_message="Не удалось получить список офисов")
+def get_all_offices(
+    db: Session = Depends(get_db),
+    current_admin = Depends(oauth2.get_current_admin)
+):
+    """
+    Получить список всех офисов/кабинетов.
+    """
+    offices = db.query(models.Office).order_by(models.Office.number).all()
+    return offices
+
+
+@router.delete("/offices/{office_id}", 
+               status_code=status.HTTP_204_NO_CONTENT)
+@exceptions.handle_exceptions(custom_message="Не удалось удалить офис")
+def delete_office(
+    office_id: int,
+    current_admin = Depends(oauth2.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление офиса по ID.
+    """
+    # Находим офис
+    office = db.query(models.Office)\
+        .filter(models.Office.id == office_id)\
+        .first()
+    
+    if not office:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Офис с ID {office_id} не найден"
+        )
+    
+    # Проверяем, есть ли связанные расписания
+    schedules_count = db.query(models.Schedule)\
+        .filter(models.Schedule.office_id == office_id)\
+        .count()
+    
+    if schedules_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Невозможно удалить офис, так как есть связанные расписания. "
+                   "Сначала удалите или измените связанные расписания."
+        )
+    
+    # Удаляем офис
+    db.delete(office)
+    db.commit()
+    
+    return Response(status_code=204)
