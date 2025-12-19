@@ -1787,3 +1787,100 @@ def get_patient_medication_report(
     }
     
     return report
+
+
+@router.delete("/patient-medicaments/{patient_medicament_id}")
+@exceptions.handle_exceptions(custom_message="Не удалось удалить назначенное лекарство")
+def delete_patient_medicament(
+    patient_medicament_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Удаление назначенного лекарства пациента.
+    Доктор может удалять только лекарства, которые он сам назначил.
+    """
+    
+    # Находим назначенное лекарство
+    patient_medicament = db.query(models.PatientMedicament)\
+        .filter(models.PatientMedicament.id == patient_medicament_id)\
+        .first()
+    
+    if not patient_medicament:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Назначенное лекарство с ID {patient_medicament_id} не найдено"
+        )
+    
+    # Проверяем, что доктор является тем, кто назначил это лекарство
+    if patient_medicament.doctor_by_id != current_doctor.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Вы можете удалять только лекарства, которые назначили сами"
+        )
+    
+    # Проверяем, есть ли связанная запись приема
+    appointment_info = ""
+    if patient_medicament.appointment_id:
+        appointment_info = f" (назначено на приеме ID: {patient_medicament.appointment_id})"
+    
+    # Удаляем
+    db.delete(patient_medicament)
+    db.commit()
+    
+    return {
+        "message": f"Назначенное лекарство успешно удалено{appointment_info}",
+        "deleted_id": patient_medicament_id,
+        "medicament_id": patient_medicament.medicament_id,
+        "patient_id": patient_medicament.patient_id
+    }
+
+
+@router.get("/my-prescriptions", response_model=List[schemas.PatientMedicamentResponse])
+@exceptions.handle_exceptions(custom_message="Не удалось получить список назначений")
+def get_my_prescriptions(
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Получение всех назначений лекарств, сделанных текущим доктором.
+    """
+    
+    prescriptions = db.query(models.PatientMedicament)\
+        .filter(models.PatientMedicament.doctor_by_id == current_doctor.id)\
+        .order_by(models.PatientMedicament.start_date.desc())\
+        .all()
+    
+    # Формируем ответ
+    result = []
+    for prescription in prescriptions:
+        # Получаем название лекарства
+        medicament = db.query(models.Medicament)\
+            .filter(models.Medicament.id == prescription.medicament_id)\
+            .first()
+        
+        # Получаем данные пациента
+        patient = db.query(models.Patient)\
+            .filter(models.Patient.id == prescription.patient_id)\
+            .first()
+        
+        # Создаем объект для ответа
+        prescription_data = {
+            "id": prescription.id,
+            "patient_id": prescription.patient_id,
+            "patient_name": f"{patient.first_name} {patient.last_name}" if patient else "Неизвестный пациент",
+            "medicament_id": prescription.medicament_id,
+            "medicament_name": medicament.name if medicament else "Неизвестное лекарство",
+            "dosage": prescription.dosage,
+            "frequency": prescription.frequency,
+            "start_date": prescription.start_date,
+            "end_date": prescription.end_date,
+            "notes": prescription.notes,
+            "doctor_id": prescription.doctor_by_id,
+            "appointment_id": prescription.appointment_id,
+            "created_at": prescription.created_at
+        }
+        
+        result.append(prescription_data)
+    
+    return result
