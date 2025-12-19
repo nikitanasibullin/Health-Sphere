@@ -240,6 +240,9 @@ class MedicationContraindicationOther(Base):
     
     medicament_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
     contraindication_id = Column(Integer, ForeignKey('other_contraindication.id'), primary_key=True)
+
+    medicament = relationship("Medicament")
+    contraindication = relationship("OtherContraindication")
     
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
@@ -248,6 +251,9 @@ class MedicamentMedicamentContraindication(Base):
     
     medication_first_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
     medication_second_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+
+    first_medicament = relationship("Medicament", foreign_keys=[medication_first_id])
+    second_medicament = relationship("Medicament", foreign_keys=[medication_second_id])
 
 
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
@@ -263,6 +269,8 @@ class PatientMedicamentContraindication(Base):
     
     patient_id = Column(Integer, ForeignKey('patient.id'), primary_key=True)
     medicament_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+    medicament = relationship("Medicament")
+
     
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
 
@@ -272,5 +280,6 @@ class PatientOtherContraindication(Base):
     
     patient_id = Column(Integer, ForeignKey('patient.id'), primary_key=True)
     contraindication_id = Column(Integer, ForeignKey('other_contraindication.id'), primary_key=True)
+    contraindication = relationship("OtherContraindication")
     
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))

@@ -227,6 +227,41 @@ def create_schedule_batch(
     if schedule.slots_count <= 0:
         raise HTTPException(400, "Количество слотов должно быть больше 0")
     
+    # Проверяем, нет ли уже расписаний в этом интервале
+    existing_schedules = db.query(models.Schedule)\
+        .filter(
+            models.Schedule.doctor_id == schedule.doctor_id,
+            models.Schedule.date == schedule.date,
+            models.Schedule.start_time < schedule.end_time,
+            models.Schedule.end_time > schedule.start_time
+        )\
+        .all()
+    
+    if existing_schedules:
+        raise HTTPException(
+            400,
+            f"Врач уже имеет расписания в указанном интервале"
+        )
+    
+    # Проверяем офис на занятость в этот день
+    existing_office_schedules = db.query(models.Schedule)\
+        .filter(
+            models.Schedule.office_id == schedule.office_id,
+            models.Schedule.date == schedule.date,
+            models.Schedule.start_time < schedule.end_time,
+            models.Schedule.end_time > schedule.start_time
+        )\
+        .all()
+    
+    if existing_office_schedules:
+        raise HTTPException(
+            400,
+            f"Офис {schedule.office_id} уже занят в указанный интервал"
+        )
+    
+    if schedule.slots_count <= 0:
+        raise HTTPException(400, "Количество слотов должно быть больше 0")
+    
     # Преобразуем время в секунды для расчетов
     start_seconds = schedule.start_time.hour * 3600 + schedule.start_time.minute * 60
     end_seconds = schedule.end_time.hour * 3600 + schedule.end_time.minute * 60

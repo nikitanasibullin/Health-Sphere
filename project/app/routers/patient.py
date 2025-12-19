@@ -305,22 +305,19 @@ def cancel_appointment(
 
 
 @router.get("/medication", response_model=dict)
-@exceptions.handle_exceptions(custom_message="Не удалось получить отчёт о пациенте")
+@exceptions.handle_exceptions(custom_message="Не удалось получить отчёт о лекарствах пациента")
 def get_patient_medication_report(
     current_patient: models.Patient = Depends(oauth2.get_current_patient),
     db: Session = Depends(get_db)
 ):
     """
-    Полный отчет о лекарствах и всех типах противопоказаний пациента.
+    Отчет о лекарствах пациента и противопоказаниях.
     """
     patient_id = current_patient.id
     
-    # 1. Получаем все лекарства пациента
+    # Получаем все лекарства пациента
     patient_medicaments = db.query(models.PatientMedicament)\
-        .options(
-            joinedload(models.PatientMedicament.medicament),
-            joinedload(models.PatientMedicament.doctor)
-        )\
+        .options(joinedload(models.PatientMedicament.medicament))\
         .filter(models.PatientMedicament.patient_id == patient_id)\
         .order_by(models.PatientMedicament.start_date.desc())\
         .all()
@@ -328,22 +325,36 @@ def get_patient_medication_report(
     # Получаем ID лекарств пациента
     patient_medicament_ids = [pm.medicament_id for pm in patient_medicaments]
     
-    # 2. Получаем противопоказания пациента к медикаментам (прямые)
+    # Получаем прямые противопоказания пациента к лекарствам
     patient_medicament_contraindications = db.query(models.PatientMedicamentContraindication)\
         .options(joinedload(models.PatientMedicamentContraindication.medicament))\
         .filter(models.PatientMedicamentContraindication.patient_id == patient_id)\
         .all()
     
-    # 3. Получаем другие противопоказания пациента (не связанные с медикаментами)
-    patient_other_contraindications = db.query(models.PatientOtherContradictions)\
-        .options(joinedload(models.PatientOtherContradictions.contraindication))\
-        .filter(models.PatientOtherContradictions.patient_id == patient_id)\
+    #Получаем другие противопоказания пациента (что нельзя делать)
+    patient_other_contraindications = db.query(models.PatientOtherContraindication)\
+        .options(joinedload(models.PatientOtherContraindication.contraindication))\
+        .filter(models.PatientOtherContraindication.patient_id == patient_id)\
         .all()
     
-    # 4. Получаем противопоказания между медикаментами пациента (взаимодействия)
-    medicament_interactions = []
+    # Находим лекарства, которые нельзя принимать (на основе взаимодействий)
+    forbidden_medicaments = set()
+    
+    # Прямые противопоказания
+    for contraindication in patient_medicament_contraindications:
+        forbidden_medicaments.add((
+            contraindication.medicament.id,
+            contraindication.medicament.name,
+            "Прямое противопоказание пациента"
+        ))
+    
+    # Взаимодействия между лекарствами пациента
     if len(patient_medicament_ids) >= 2:
-        medicament_interactions = db.query(models.MedicamentMedicamentContraindication)\
+        # Находим все лекарства, которые взаимодействуют с лекарствами пациента
+        from sqlalchemy import or_, and_
+        
+        # Получаем все взаимодействия, где хотя бы одно лекарство из списка пациента
+        interactions = db.query(models.MedicamentMedicamentContraindication)\
             .options(
                 joinedload(models.MedicamentMedicamentContraindication.first_medicament),
                 joinedload(models.MedicamentMedicamentContraindication.second_medicament)
@@ -355,92 +366,73 @@ def get_patient_medication_report(
                 )
             )\
             .all()
+        
+        # Для каждого взаимодействия определяем, какое лекарство противопоказано
+        for interaction in interactions:
+            # Если первое лекарство принимает пациент, то второе противопоказано
+            if interaction.medication_first_id in patient_medicament_ids:
+                forbidden_medicaments.add((
+                    interaction.medication_second_id,
+                    interaction.second_medicament.name,
+                    f"Взаимодействует с '{interaction.first_medicament.name}'"
+                ))
+            
+            # Если второе лекарство принимает пациент, то первое противопоказано
+            if interaction.medication_second_id in patient_medicament_ids:
+                forbidden_medicaments.add((
+                    interaction.medication_first_id,
+                    interaction.first_medicament.name,
+                    f"Взаимодействует с '{interaction.second_medicament.name}'"
+                ))
     
-    # 5. Получаем другие противопоказания для медикаментов пациента
-    medicament_other_contraindications = []
-    if patient_medicament_ids:
-        medicament_other_contraindications = db.query(models.MedicationContraindicationOther)\
-            .options(
-                joinedload(models.MedicationContraindicationOther.medicament),
-                joinedload(models.MedicationContraindicationOther.contraindication)
-            )\
-            .filter(models.MedicationContraindicationOther.medicament_id.in_(patient_medicament_ids))\
-            .all()
+
+    current_medicament_ids = set(patient_medicament_ids)
+    forbidden_medicaments_filtered = [
+        {
+            "medicament_id": medicament_id,
+            "medicament_name": medicament_name,
+            "reason": reason
+        }
+        for medicament_id, medicament_name, reason in forbidden_medicaments
+        if medicament_id not in current_medicament_ids  # фильтруем те, что уже принимает
+    ]
     
-    # 6. Формируем полный отчет
+    # тчет
     report = {
         "patient_info": {
             "id": current_patient.id,
             "full_name": f"{current_patient.last_name} {current_patient.first_name} {current_patient.patronymic}",
             "birth_date": current_patient.birth_date
         },
-        "medicaments": [
+        
+        #Все лекарства пациента
+        "current_medicaments": [
             {
                 "id": pm.id,
                 "medicament_id": pm.medicament_id,
-                "medicament_name": pm.medicament.name if pm.medicament else "Неизвестно",
+                "medicament_name": pm.medicament.name,
                 "dosage": pm.dosage,
                 "frequency": pm.frequency,
                 "start_date": pm.start_date,
                 "end_date": pm.end_date,
                 "notes": pm.notes,
-                "prescribed_by": pm.doctor.name if pm.doctor else "Не указан",
-                "appointment_id": pm.appointment_id,
                 "is_active": pm.end_date is None or pm.end_date >= date.today()
             }
             for pm in patient_medicaments
         ],
-        "patient_medicament_contraindications": [
-            {
-                "medicament_id": pmc.medicament_id,
-                "medicament_name": pmc.medicament.name if pmc.medicament else "Неизвестно",
-                "type": "Прямое противопоказание пациента к медикаменту"
-            }
-            for pmc in patient_medicament_contraindications
-        ],
-        "patient_other_contraindications": [
+        
+        #Какие лекарства нельзя принимать
+        "forbidden_medicaments": forbidden_medicaments_filtered,
+        
+        #другие противопоказания
+        "forbidden_activities": [
             {
                 "contraindication_id": poc.contraindication_id,
-                "contraindication_name": poc.contraindication.name if poc.contraindication else "Неизвестно",
-                "type": "Другое противопоказание пациента"
+                "contraindication_name": poc.contraindication.name,
+                "type": "Общее противопоказание"
             }
             for poc in patient_other_contraindications
-        ],
-        "medicament_interactions": [
-            {
-                "first_medicament_id": mi.medication_first_id,
-                "first_medicament_name": mi.first_medicament.name if mi.first_medicament else "Неизвестно",
-                "second_medicament_id": mi.medication_second_id,
-                "second_medicament_name": mi.second_medicament.name if mi.second_medicament else "Неизвестно",
-                "type": "Взаимодействие между медикаментами"
-            }
-            for mi in medicament_interactions
-        ],
-        "medicament_other_contraindications": [
-            {
-                "medicament_id": moc.medicament_id,
-                "medicament_name": moc.medicament.name if moc.medicament else "Неизвестно",
-                "contraindication_id": moc.contraindication_id,
-                "contraindication_name": moc.contraindication.name if moc.contraindication else "Неизвестно",
-                "type": "Другое противопоказание для медикамента"
-            }
-            for moc in medicament_other_contraindications
-        ],
-        "summary": {
-            "total_medicaments": len(patient_medicaments),
-            "active_medicaments": len([pm for pm in patient_medicaments 
-                                        if pm.end_date is None or pm.end_date >= date.today()]),
-            "patient_medicament_contraindications": len(patient_medicament_contraindications),
-            "patient_other_contraindications": len(patient_other_contraindications),
-            "medicament_interactions": len(medicament_interactions),
-            "medicament_other_contraindications": len(medicament_other_contraindications),
-            "total_contraindications": (
-                len(patient_medicament_contraindications) +
-                len(patient_other_contraindications) +
-                len(medicament_interactions) +
-                len(medicament_other_contraindications)
-            )
-        }
+        ]
     }
     
     return report
