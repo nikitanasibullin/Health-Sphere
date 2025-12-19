@@ -36,8 +36,16 @@ class Patient(Base):
 
     appointments = relationship("Appointment", back_populates="patient",
         cascade="all, delete-orphan")
-    medicaments = relationship("PatientMedicament", back_populates="patient", cascade="all, delete-orphan")
-    contradictions = relationship("PatientContradiction", back_populates="patient", cascade="all, delete-orphan")
+    medicaments = relationship("PatientMedicament",back_populates="patient", cascade="all, delete-orphan")
+    medicament_contraindications = relationship(
+        "PatientMedicamentContraindication", 
+        cascade="all, delete-orphan"
+    )
+    
+    other_contraindications = relationship(
+        "PatientOtherContradictions", 
+        cascade="all, delete-orphan"
+    )
 
     user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=True)
 
@@ -134,13 +142,14 @@ class Schedule(Base):
     
     id = Column(Integer, primary_key=True)
     doctor_id = Column(Integer, ForeignKey('doctor.id'), nullable=False)
-    office_number = Column(String(10))
+    office_id = Column(Integer, ForeignKey('office.id'), nullable=False) 
     date = Column(Date, nullable=False)
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     is_available = Column(Boolean, nullable=False, default=True)
     
     doctor = relationship("Doctor", back_populates="schedules")
+    office = relationship("Office")
     
     created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
 
@@ -174,45 +183,94 @@ class Appointment(Base):
     )
 
 
-class Contradiction(Base):
-    __tablename__ = "contradiction"
-    
-    medicament_name = Column(String(50), primary_key=True, nullable=False)
-    contradiction = Column(String(50), primary_key=True, nullable=False)
-
-    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
-
     
 class PatientMedicament(Base):
     __tablename__ = "patient_medicament"
     
     id = Column(Integer, primary_key=True)
     patient_id = Column(Integer, ForeignKey('patient.id', ondelete='CASCADE'), nullable=False)
-    medicament_name = Column(String(100), nullable=False)
+    medicament_id = Column(Integer, ForeignKey('medicament.id'), nullable=False)
     dosage = Column(String(50))
     frequency = Column(String(50))
     start_date = Column(Date, nullable=False)
     end_date = Column(Date)
-    prescribed_by = Column(String(100))  # кто назначил
+    doctor_by_id = Column(Integer, ForeignKey('doctor.id'))
+    appointment_id = Column(Integer, ForeignKey('appointment.id'))
     notes = Column(Text)
     
     patient = relationship("Patient", back_populates="medicaments")
+    medicament = relationship("Medicament")
+    doctor = relationship("Doctor", foreign_keys=[doctor_by_id])
+    appointment = relationship("Appointment")
 
     created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
     
     __table_args__ = (
-        CheckConstraint("char_length(medicament_name) BETWEEN 1 AND 100", name='check_medicament_name_length'),
         CheckConstraint("end_date IS NULL OR end_date >= start_date", name='check_valid_dates'),
     )
 
-class PatientContradiction(Base):
-    __tablename__ = "patient_contradiction"
+
+class Office(Base):
+    __tablename__ = "office"
     
     id = Column(Integer, primary_key=True)
-    patient_id = Column(Integer, ForeignKey('patient.id', ondelete='CASCADE'), nullable=False)
-    contradiction = Column(String(100), nullable=False)
-    
-    patient = relationship("Patient", back_populates="contradictions")
+    number = Column(String(15),nullable=False,unique=True)
 
-    created_at = Column(TIMESTAMP(timezone=True),nullable=False,server_default = text('now()'))
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+class Medicament(Base):
+    __tablename__ = "medicament"
     
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30),nullable=False,unique=True)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+
+class OtherContraindication(Base):
+    __tablename__ = "other_contraindication"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+
+class MedicationContraindicationOther(Base):
+    __tablename__ = "medication_contraindication_other"
+    
+    medicament_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+    contraindication_id = Column(Integer, ForeignKey('other_contraindication.id'), primary_key=True)
+    
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+class MedicamentMedicamentContraindication(Base):
+    __tablename__ = "medicament_medicament_contraindication"
+    
+    medication_first_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+    medication_second_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+
+
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+    
+    __table_args__ = (
+        CheckConstraint("medication_first_id < medication_second_id", name='check_different_medicaments'),
+    )
+
+
+
+class PatientMedicamentContraindication(Base):
+    __tablename__ = "patient_medicament_contraindication"
+    
+    patient_id = Column(Integer, ForeignKey('patient.id'), primary_key=True)
+    medicament_id = Column(Integer, ForeignKey('medicament.id'), primary_key=True)
+    
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))
+
+
+class PatientOtherContradictions(Base):
+    __tablename__ = "patient_other_contradictions"
+    
+    patient_id = Column(Integer, ForeignKey('patient.id'), primary_key=True)
+    contraindication_id = Column(Integer, ForeignKey('other_contraindication.id'), primary_key=True)
+    
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text('now()'))

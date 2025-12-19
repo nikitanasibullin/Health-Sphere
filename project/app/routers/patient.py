@@ -1,6 +1,6 @@
 import models,schemas, utils, oauth2
 from fastapi import FastAPI, Response, status, HTTPException, Depends, APIRouter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
 from database import get_db
 from typing import Optional,List
 from sqlalchemy import func
@@ -311,84 +311,135 @@ def get_patient_medication_report(
     db: Session = Depends(get_db)
 ):
     """
-    Полный отчет о лекарствах и противопоказаниях пациента.
-    Возвращает лекарства пациента + все противопоказания (прямые и из базы лекарств).
+    Полный отчет о лекарствах и всех типах противопоказаний пациента.
     """
-
-
-    patient_id=current_patient.id
-    # Проверяем существование пациента
-    patient = db.query(models.Patient)\
-        .filter(models.Patient.id == patient_id)\
-        .first()
-    
-    if not patient:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Пациент с ID {patient_id} не найден"
-        )
+    patient_id = current_patient.id
     
     # 1. Получаем все лекарства пациента
     patient_medicaments = db.query(models.PatientMedicament)\
+        .options(
+            joinedload(models.PatientMedicament.medicament),
+            joinedload(models.PatientMedicament.doctor)
+        )\
         .filter(models.PatientMedicament.patient_id == patient_id)\
         .order_by(models.PatientMedicament.start_date.desc())\
         .all()
     
-    # 2. Получаем прямые противопоказания пациента
-    patient_contradictions = db.query(models.PatientContradiction)\
-        .filter(models.PatientContradiction.patient_id == patient_id)\
+    # Получаем ID лекарств пациента
+    patient_medicament_ids = [pm.medicament_id for pm in patient_medicaments]
+    
+    # 2. Получаем противопоказания пациента к медикаментам (прямые)
+    patient_medicament_contraindications = db.query(models.PatientMedicamentContraindication)\
+        .options(joinedload(models.PatientMedicamentContraindication.medicament))\
+        .filter(models.PatientMedicamentContraindication.patient_id == patient_id)\
         .all()
     
-    # 3. Получаем названия лекарств пациента
-    medicament_names = [pm.medicament_name for pm in patient_medicaments]
+    # 3. Получаем другие противопоказания пациента (не связанные с медикаментами)
+    patient_other_contraindications = db.query(models.PatientOtherContradictions)\
+        .options(joinedload(models.PatientOtherContradictions.contraindication))\
+        .filter(models.PatientOtherContradictions.patient_id == patient_id)\
+        .all()
     
-    # 4. Получаем противопоказания для лекарств пациента из общей базы
-    medicament_contradictions = []
-    if medicament_names:
-        medicament_contradictions = db.query(models.Contradiction)\
-            .filter(models.Contradiction.medicament_name.in_(medicament_names))\
+    # 4. Получаем противопоказания между медикаментами пациента (взаимодействия)
+    medicament_interactions = []
+    if len(patient_medicament_ids) >= 2:
+        medicament_interactions = db.query(models.MedicamentMedicamentContraindication)\
+            .options(
+                joinedload(models.MedicamentMedicamentContraindication.first_medicament),
+                joinedload(models.MedicamentMedicamentContraindication.second_medicament)
+            )\
+            .filter(
+                or_(
+                    models.MedicamentMedicamentContraindication.medication_first_id.in_(patient_medicament_ids),
+                    models.MedicamentMedicamentContraindication.medication_second_id.in_(patient_medicament_ids)
+                )
+            )\
             .all()
     
-    # 5. Формируем отчет
+    # 5. Получаем другие противопоказания для медикаментов пациента
+    medicament_other_contraindications = []
+    if patient_medicament_ids:
+        medicament_other_contraindications = db.query(models.MedicationContraindicationOther)\
+            .options(
+                joinedload(models.MedicationContraindicationOther.medicament),
+                joinedload(models.MedicationContraindicationOther.contraindication)
+            )\
+            .filter(models.MedicationContraindicationOther.medicament_id.in_(patient_medicament_ids))\
+            .all()
+    
+    # 6. Формируем полный отчет
     report = {
         "patient_info": {
-            "id": patient.id,
-            "full_name": f"{patient.last_name} {patient.first_name} {patient.patronymic}",
-            "birth_date": patient.birth_date
+            "id": current_patient.id,
+            "full_name": f"{current_patient.last_name} {current_patient.first_name} {current_patient.patronymic}",
+            "birth_date": current_patient.birth_date
         },
         "medicaments": [
             {
                 "id": pm.id,
-                "name": pm.medicament_name,
+                "medicament_id": pm.medicament_id,
+                "medicament_name": pm.medicament.name if pm.medicament else "Неизвестно",
                 "dosage": pm.dosage,
                 "frequency": pm.frequency,
                 "start_date": pm.start_date,
                 "end_date": pm.end_date,
-                "prescribed_by": pm.prescribed_by,
+                "notes": pm.notes,
+                "prescribed_by": pm.doctor.name if pm.doctor else "Не указан",
+                "appointment_id": pm.appointment_id,
                 "is_active": pm.end_date is None or pm.end_date >= date.today()
             }
             for pm in patient_medicaments
         ],
-        "direct_contraindications": [
+        "patient_medicament_contraindications": [
             {
-                "id": pc.id,
-                "contradiction": pc.contradiction
+                "medicament_id": pmc.medicament_id,
+                "medicament_name": pmc.medicament.name if pmc.medicament else "Неизвестно",
+                "type": "Прямое противопоказание пациента к медикаменту"
             }
-            for pc in patient_contradictions
+            for pmc in patient_medicament_contraindications
         ],
-        "medicament_based_contraindications": [
+        "patient_other_contraindications": [
             {
-                "medicament_name": mc.medicament_name,
-                "contradiction": mc.contradiction
+                "contraindication_id": poc.contraindication_id,
+                "contraindication_name": poc.contraindication.name if poc.contraindication else "Неизвестно",
+                "type": "Другое противопоказание пациента"
             }
-            for mc in medicament_contradictions
+            for poc in patient_other_contraindications
+        ],
+        "medicament_interactions": [
+            {
+                "first_medicament_id": mi.medication_first_id,
+                "first_medicament_name": mi.first_medicament.name if mi.first_medicament else "Неизвестно",
+                "second_medicament_id": mi.medication_second_id,
+                "second_medicament_name": mi.second_medicament.name if mi.second_medicament else "Неизвестно",
+                "type": "Взаимодействие между медикаментами"
+            }
+            for mi in medicament_interactions
+        ],
+        "medicament_other_contraindications": [
+            {
+                "medicament_id": moc.medicament_id,
+                "medicament_name": moc.medicament.name if moc.medicament else "Неизвестно",
+                "contraindication_id": moc.contraindication_id,
+                "contraindication_name": moc.contraindication.name if moc.contraindication else "Неизвестно",
+                "type": "Другое противопоказание для медикамента"
+            }
+            for moc in medicament_other_contraindications
         ],
         "summary": {
             "total_medicaments": len(patient_medicaments),
             "active_medicaments": len([pm for pm in patient_medicaments 
                                         if pm.end_date is None or pm.end_date >= date.today()]),
-            "total_direct_contraindications": len(patient_contradictions),
-            "total_medicament_contraindications": len(medicament_contradictions)
+            "patient_medicament_contraindications": len(patient_medicament_contraindications),
+            "patient_other_contraindications": len(patient_other_contraindications),
+            "medicament_interactions": len(medicament_interactions),
+            "medicament_other_contraindications": len(medicament_other_contraindications),
+            "total_contraindications": (
+                len(patient_medicament_contraindications) +
+                len(patient_other_contraindications) +
+                len(medicament_interactions) +
+                len(medicament_other_contraindications)
+            )
         }
     }
     
