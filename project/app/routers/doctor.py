@@ -928,7 +928,7 @@ def add_contraindication(
         )
     
     new_contraindication = models.OtherContraindication(
-        name=contraindication_data["name"].capitalize()
+        name=contraindication_data.name.capitalize()
     )
     
     db.add(new_contraindication)
@@ -1175,8 +1175,8 @@ def remove_medicament_interaction(
     Удалить взаимодействие между двумя медикаментами
     Принимает JSON: {"medicament1_id": 1, "medicament2_id": 2}
     """
-    medicament1_id = interaction_data.medicament1_id
-    medicament2_id = interaction_data.medicament2_id
+    medicament1_id = interaction_data.first_medicament_id
+    medicament2_id = interaction_data.second_medicament_id
     
     if not medicament1_id or not medicament2_id:
         raise HTTPException(
@@ -1367,10 +1367,10 @@ def add_patient_medication_contraindication(
 ):
     """
     Добавить противопоказание пациента к медикаменту
-    Принимает JSON: {"patient_id": 1, "medicament_id": 2}
+    Принимает JSON: {"patient_id": 1, "contraindication_medicament_id": 2}
     """
     patient_id = data.patient_id
-    medicament_id = data.medicament_id
+    medicament_id = data.contraindication_medicament_id
     
     if not patient_id or not medicament_id:
         raise HTTPException(
@@ -1467,7 +1467,7 @@ def remove_patient_medication_contraindication(
     Принимает JSON: {"patient_id": 1, "medicament_id": 2}
     """
     patient_id = data.patient_id
-    medicament_id = data.medicament_id
+    medicament_id = data.contraindication_medicament_id
     
     if not patient_id or not medicament_id:
         raise HTTPException(
@@ -1776,7 +1776,7 @@ def get_patient_medication_report(
         "forbidden_medicaments": forbidden_medicaments_filtered,
         
         #другие противопоказания
-        "forbidden_activities": [
+        "other contraindications": [
             {
                 "contraindication_id": poc.contraindication_id,
                 "contraindication_name": poc.contraindication.name,
