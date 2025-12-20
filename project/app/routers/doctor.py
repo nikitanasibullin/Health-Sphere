@@ -1168,59 +1168,6 @@ def get_all_medicament_interactions(
     ]
 
 
-@router.post("/interactions", response_model=dict)
-@exceptions.handle_exceptions(custom_message="Не удалось добавить взаимодействие")
-def add_medicament_interaction(
-    interaction_data: schemas.MedMedContr,  # {"first_medicament_id": 1, "second_medicament_id": 2}
-    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
-    db: Session = Depends(get_db)
-):
-    """
-    Добавить противопоказанное взаимодействие между медикаментами
-    """
-    # Упорядочиваем ID (меньший первый)
-    id1, id2 = sorted([interaction_data.first_medicament_id, 
-                       interaction_data.second_medicament_id])
-    
-    # Проверяем существование медикаментов
-    medicament1 = db.query(models.Medicament).filter(models.Medicament.id == id1).first()
-    medicament2 = db.query(models.Medicament).filter(models.Medicament.id == id2).first()
-    
-    if not medicament1 or not medicament2:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Один или оба медикамента не найдены"
-        )
-    
-    # Проверяем, нет ли уже такого взаимодействия
-    existing = db.query(models.MedicamentMedicamentContraindication)\
-        .filter(
-            models.MedicamentMedicamentContraindication.medication_first_id == id1,
-            models.MedicamentMedicamentContraindication.medication_second_id == id2
-        )\
-        .first()
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Такое взаимодействие уже существует"
-        )
-    
-    # Создаем взаимодействие
-    new_interaction = models.MedicamentMedicamentContraindication(
-        medication_first_id=id1,
-        medication_second_id=id2
-    )
-    
-    db.add(new_interaction)
-    db.commit()
-    
-    return {
-        "message": f"Взаимодействие между '{medicament1.name}' и '{medicament2.name}' добавлено",
-        "first_medicament_id": id1,
-        "second_medicament_id": id2
-    }
-
 @router.post("/medication-contraindication", response_model=dict)
 @exceptions.handle_exceptions(custom_message="Не удалось добавить связь медикамент-противопоказание")
 def add_medicament_contraindication_link(
