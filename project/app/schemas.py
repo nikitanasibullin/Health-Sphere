@@ -245,3 +245,8 @@ class MedicamentContr(BaseModel):
 class MedMedContr(BaseModel):
     first_medicament_id: int
     second_medicament_id: int
+
+
+class MedicamentCreate(BaseModel):
+    medicament_name: str
+    med_contraindications_ids: List[int]

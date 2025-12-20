@@ -810,16 +810,18 @@ def get_all_medicaments(
 @router.post("/medicaments", response_model=dict)
 @exceptions.handle_exceptions(custom_message="Не удалось добавить медикамент")
 def add_medicament(
-    medicament_data: schemas.CreateWithName,
+    medicament_data: schemas.MedicamentCreate,
     current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
     db: Session = Depends(get_db)
 ):
     """
-    Добавить новый медикамент в справочник
+    Добавить новый медикамент в справочник со связями с другими медикаментами.
+    Создает медикамент и сразу добавляет связи с противопоказанными медикаментами.
+    Изменения выполняются в одной транзакции - либо все успешно, либо все откатывается.
     """
-    # Проверяем, нет ли уже такого медикамента
+        # Проверяем, нет ли уже такого медикамента по названию
     existing = db.query(models.Medicament)\
-        .filter(models.Medicament.name == medicament_data.name)\
+        .filter(models.Medicament.name == medicament_data.medicament_name.capitalize())\
         .first()
     
     if existing:
@@ -828,20 +830,75 @@ def add_medicament(
             detail="Медикамент с таким названием уже существует"
         )
     
-    # Создаем новый медикамент
+    #Создаем новый медикамент
     new_medicament = models.Medicament(
-        name=medicament_data.name.capitalize()
+        name=medicament_data.medicament_name.capitalize()
     )
     
     db.add(new_medicament)
-    db.commit()
-    db.refresh(new_medicament)
+    db.flush()  # Получаем ID нового медикамента, но пока что не коммитим
     
-    return {
+    #Проверяем существование всех указанных противопоказанных медикаментов
+    if medicament_data.med_contraindications_ids:
+        existing_medicaments = db.query(models.Medicament)\
+            .filter(models.Medicament.id.in_(medicament_data.med_contraindications_ids))\
+            .all()
+        
+        existing_ids = {med.id for med in existing_medicaments}
+        requested_ids = set(medicament_data.med_contraindications_ids)
+        
+        # Проверяем, все ли существуют
+        missing_ids = requested_ids - existing_ids
+        if missing_ids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Медикаменты с ID {missing_ids} не найдены"
+            )
+        
+        #Создаем связи между медикаментами
+        created_links = []
+        for other_medicament_id in medicament_data.med_contraindications_ids:
+            if other_medicament_id == new_medicament.id:
+                continue
+            
+            # Упорядочиваем id
+            id1, id2 = sorted([new_medicament.id, other_medicament_id])
+            
+            # Создаем новую связь
+            new_link = models.MedicamentMedicamentContraindication(
+                medication_first_id=id1,
+                medication_second_id=id2
+            )
+            
+            db.add(new_link)
+            created_links.append(other_medicament_id)
+    
+    db.commit()
+    
+
+    result = {
         "id": new_medicament.id,
         "name": new_medicament.name,
         "message": "Медикамент успешно добавлен"
     }
+    
+    if medicament_data.med_contraindications_ids:
+        # Получаем названия связанных медикаментов для ответа
+        linked_medicaments = db.query(models.Medicament)\
+            .filter(models.Medicament.id.in_(created_links))\
+            .all()
+        
+        result["created_links"] = [
+            {
+                "medicament_id": med.id,
+                "medicament_name": med.name
+            }
+            for med in linked_medicaments
+        ]
+        result["message"] = f"Медикамент успешно добавлен с {len(created_links)} противопоказаниями"
+    
+    return result
+    
 
 
 
@@ -853,7 +910,9 @@ def delete_medicament(
     db: Session = Depends(get_db)
 ):
     """
-    Удалить медикамент из справочника
+    Удалить медикамент из справочника.
+    Удаление возможно только если нет активных назначений этого медикамента пациентам.
+    Автоматически удаляет все связанные противопоказания и взаимодействия.
     """
     medicament = db.query(models.Medicament)\
         .filter(models.Medicament.id == medicament_id)\
@@ -865,14 +924,132 @@ def delete_medicament(
             detail="Медикамент не найден"
         )
     
+    # есть ли активные назначения этого медикамента пациентам
+    active_prescriptions = db.query(models.PatientMedicament)\
+        .filter(
+            models.PatientMedicament.medicament_id == medicament_id,
+            models.PatientMedicament.end_date.is_(None)  # назначения без даты окончания
+        )\
+        .all()
+    
+    #проверяем назначения с датой окончания в будущем
+    future_prescriptions = db.query(models.PatientMedicament)\
+        .filter(
+            models.PatientMedicament.medicament_id == medicament_id,
+            models.PatientMedicament.end_date >= date.today()
+        )\
+        .all()
+    
+    all_active_prescriptions = list(set(active_prescriptions + future_prescriptions))
+    
+    if all_active_prescriptions:
+        patient_ids = list(set([pm.patient_id for pm in all_active_prescriptions]))
+        patients = db.query(models.Patient)\
+            .filter(models.Patient.id.in_(patient_ids))\
+            .all()
+        
+        patient_names = [
+            f"{p.last_name} {p.first_name} {p.patronymic}" 
+            for p in patients
+        ]
+        
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": f"Невозможно удалить медикамент '{medicament.name}', так как он назначен пациентам",
+                "medicament_id": medicament_id,
+                "medicament_name": medicament.name,
+                "affected_patients": patient_names,
+                "active_prescriptions_count": len(all_active_prescriptions),
+                "suggestion": "Сначала отмените все активные назначения этого медикамента"
+            }
+        )
+    
+    #Проверяем, есть ли неактивные
+    historical_prescriptions = db.query(models.PatientMedicament)\
+        .filter(
+            models.PatientMedicament.medicament_id == medicament_id,
+            models.PatientMedicament.end_date < date.today()
+        )\
+        .count()
+    
+
+    # Взаимодействия с другими медикаментами
+    interactions_as_first = db.query(models.MedicamentMedicamentContraindication)\
+        .filter(models.MedicamentMedicamentContraindication.medication_first_id == medicament_id)\
+        .count()
+    
+    interactions_as_second = db.query(models.MedicamentMedicamentContraindication)\
+        .filter(models.MedicamentMedicamentContraindication.medication_second_id == medicament_id)\
+        .count()
+    
+    total_interactions = interactions_as_first + interactions_as_second
+    
+    # Прямые противопоказания пациентов
+    patient_contraindications = db.query(models.PatientMedicamentContraindication)\
+        .filter(models.PatientMedicamentContraindication.medicament_id == medicament_id)\
+        .count()
+    
+    # Связи с другими противопоказаниями
+    other_contraindications = db.query(models.MedicationContraindicationOther)\
+        .filter(models.MedicationContraindicationOther.medicament_id == medicament_id)\
+        .count()
+
+    
+    # Удаляем неактивные назначения пациентам
+    if historical_prescriptions > 0:
+        db.query(models.PatientMedicament)\
+            .filter(
+                models.PatientMedicament.medicament_id == medicament_id,
+                models.PatientMedicament.end_date < date.today()
+            )\
+            .delete(synchronize_session=False)
+    
+    # Удаляем прямые противопоказания пациентов к этому медикаменту
+    if patient_contraindications > 0:
+        db.query(models.PatientMedicamentContraindication)\
+            .filter(models.PatientMedicamentContraindication.medicament_id == medicament_id)\
+            .delete(synchronize_session=False)
+    
+    #Удаляем связи с другими противопоказаниями
+    if other_contraindications > 0:
+        db.query(models.MedicationContraindicationOther)\
+            .filter(models.MedicationContraindicationOther.medicament_id == medicament_id)\
+            .delete(synchronize_session=False)
+    
+    #Удаляем взаимодействия с другими медикаментами
+    if total_interactions > 0:
+        # Удаляем где медикамент первый
+        db.query(models.MedicamentMedicamentContraindication)\
+            .filter(models.MedicamentMedicamentContraindication.medication_first_id == medicament_id)\
+            .delete(synchronize_session=False)
+        
+        # Удаляем где медикамент второй
+        db.query(models.MedicamentMedicamentContraindication)\
+            .filter(models.MedicamentMedicamentContraindication.medication_second_id == medicament_id)\
+            .delete(synchronize_session=False)
+    
+    # Удаляем сам медикамент
     db.delete(medicament)
+    
     db.commit()
     
-    return {
+    report = {
         "message": f"Медикамент '{medicament.name}' успешно удален",
-        "deleted_id": medicament_id
+        "deleted_id": medicament_id,
+        "deleted_name": medicament.name,
+        "deleted_statistics": {
+            "historical_prescriptions_deleted": historical_prescriptions,
+            "patient_contraindications_deleted": patient_contraindications,
+            "other_contraindications_deleted": other_contraindications,
+            "medicament_interactions_deleted": total_interactions,
+        },
+        "note": "Все связанные записи были удалены автоматически"
     }
-
+    
+    return report
+        
+   
 
 
 @router.get("/contraindications", response_model=List[dict])
