@@ -29,7 +29,7 @@ import AppLayout from './common/AppLayout.vue'
 import DoctorDashboard from './doctor/DoctorDashboard.vue'
 import DoctorAppointments from './doctor/DoctorAppointments.vue'
 //import DoctorPatients from './doctor/DoctorPatients.vue'
-import DoctorPrescriptions from './doctor/DoctorPrescriptions.vue'
+//import DoctorPrescriptions from './doctor/DoctorPrescriptions.vue'
 import DoctorMedicaments from './doctor/DoctorMedicaments.vue'
 
 import { useDoctorData } from '../composables/useDoctorData'
@@ -41,7 +41,7 @@ export default {
     DoctorDashboard,
     DoctorAppointments,
     //DoctorPatients,
-    DoctorPrescriptions,
+    //DoctorPrescriptions,
     DoctorMedicaments
   },
   setup() {
@@ -57,8 +57,8 @@ export default {
       { id: 'dashboard', name: 'Dashboard', icon: 'fas fa-chart-line' },
       { id: 'appointments', name: 'Appointments', icon: 'fas fa-calendar-alt' },
       //{ id: 'patients', name: 'My Patients', icon: 'fas fa-users' },
-      { id: 'prescriptions', name: 'Prescriptions', icon: 'fas fa-prescription' },
-      { id: 'medicaments', name: 'Medicaments', icon: 'fas fa-medicaments' }
+      //{ id: 'prescriptions', name: 'Prescriptions', icon: 'fas fa-prescription' },
+      { id: 'medicaments', name: 'Medicaments', icon: 'fa-solid fa-capsules' }
     ]
 
     const notifications = ref([
