@@ -55,6 +55,7 @@ def update_appointment_info(
     # Обновляем статус
     if update_data.status is not None:
         db_appointment.status = update_data.status
+        db_appointment.information=update_data.information
     
     db.commit()
     db.refresh(db_appointment)
@@ -321,11 +322,6 @@ def add_medicaments_for_appointment(
     else:
         success_message = f"Все {len(added_medicaments)} лекарств успешно добавлены"
 
-    # Обновляем информацию в записи приема
-    if db_appointment.information:
-        db_appointment.information = db_appointment.information + "\n\n" + info_text
-    else:
-        db_appointment.information = info_text
 
     db.commit()
 
@@ -635,11 +631,6 @@ def add_medicaments_for_appointment(
     else:
         success_message = f"Все {len(added_medicaments)} лекарств успешно добавлены"
 
-    # Обновляем информацию в записи приема
-    if db_appointment.information:
-        db_appointment.information = db_appointment.information + "\n\n" + info_text
-    else:
-        db_appointment.information = info_text
 
     db.commit()
 
