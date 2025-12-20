@@ -1,35 +1,36 @@
 import { computed } from 'vue'
 import http from '../components/http'
 import {
-  state,
-  handleApiError,
-  useHospitalCore,
-  DAYS_OF_WEEK,
-  generateTimeSlots,
-  calculateSlots
+    state,
+    handleApiError,
+    useHospitalCore,
+    DAYS_OF_WEEK,
+    generateTimeSlots,
+    calculateSlots
 } from './useHospitalCore'
 
 export function useAdminData() {
-  const core = useHospitalCore()
+    const core = useHospitalCore()
 
-  // ==================== FETCH FUNCTIONS ====================
+    // ==================== FETCH FUNCTIONS ====================
 
-  const fetchPatients = async () => {
-    try {
-      state.loading.patients = true
-      state.errors.patients = null
-      const response = await http.get('/api/admin/patients')
-      state.patients = response.data
-      return response.data
-    } catch (error) {
-      state.errors.patients = error.response?.data?.detail || error.message
-      console.error('Failed to fetch patients:', error)
-      return []
-    } finally {
-      state.loading.patients = false
+    const fetchPatients = async () => {
+        try {
+            state.loading.patients = true
+            state.errors.patients = null
+            const response = await http.get('/api/admin/patients')
+            state.patients = response.data
+            return response.data
+        } catch (error) {
+            state.errors.patients = error.response?.data?.detail || error.message
+            console.error('Failed to fetch patients:', error)
+            return []
+        } finally {
+            state.loading.patients = false
+        }
     }
-  }
-  const fetchAdminDoctorSchedule = async (doctorId) => {
+
+    const fetchAdminDoctorSchedule = async (doctorId) => {
         try {
             const response = await http.get(`/api/admin/schedule/${doctorId}`)
             return response.data.map(schedule => ({
@@ -40,7 +41,8 @@ export function useAdminData() {
                 endTime: schedule.end_time,
                 appointmentCount: schedule.slots_count,
                 bookedCount: schedule.booked_count || 0,
-                officeNumber: schedule.office_number,
+                officeId: schedule.office_id,
+                officeNumber: schedule.office?.number || schedule.office_number,
                 isActive: schedule.is_available ?? true
             }))
         } catch (error) {
@@ -48,364 +50,413 @@ export function useAdminData() {
             return []
         }
     }
-  const fetchDoctors = async () => {
-    try {
-      state.loading.doctors = true
-      state.errors.doctors = null
-      const response = await http.get('/api/admin/doctors')
 
-      state.doctors = response.data.map((doctor) => ({
-        id: doctor.id,
-        first_name: doctor.first_name,
-        last_name: doctor.last_name,
-        patronymic: doctor.patronymic || '',
-        name: `${doctor.first_name} ${doctor.last_name} ${doctor.patronymic || ''}`.trim(),
-        specialization: doctor.specialization.name,
-      }))
+    const fetchDoctors = async () => {
+        try {
+            state.loading.doctors = true
+            state.errors.doctors = null
+            const response = await http.get('/api/admin/doctors')
 
-      return response.data
-    } catch (error) {
-      state.errors.doctors = error.response?.data?.detail || error.message
-      console.error('Failed to fetch doctors (admin):', error)
-      return []
-    } finally {
-      state.loading.doctors = false
+            state.doctors = response.data.map((doctor) => ({
+                id: doctor.id,
+                first_name: doctor.first_name,
+                last_name: doctor.last_name,
+                patronymic: doctor.patronymic || '',
+                name: `${doctor.first_name} ${doctor.last_name} ${doctor.patronymic || ''}`.trim(),
+                specialization: doctor.specialization.name,
+            }))
+
+            return response.data
+        } catch (error) {
+            state.errors.doctors = error.response?.data?.detail || error.message
+            console.error('Failed to fetch doctors (admin):', error)
+            return []
+        } finally {
+            state.loading.doctors = false
+        }
     }
-  }
 
-  const fetchSpecializations = async () => {
-    try {
-      state.loading.specializations = true
-      const response = await http.get('/api/admin/specializations')
-      state.specializations = response.data
-      return response.data
-    } catch (error) {
-      console.error('Failed to fetch specializations:', error)
-      return []
-    } finally {
-      state.loading.specializations = false
+    const fetchSpecializations = async () => {
+        try {
+            state.loading.specializations = true
+            const response = await http.get('/api/admin/specializations')
+            state.specializations = response.data
+            console.log(response.data)
+            return response.data
+        } catch (error) {
+            console.error('Failed to fetch specializations:', error)
+            return []
+        } finally {
+            state.loading.specializations = false
+        }
     }
-  }
 
-  const fetchAppointments = async () => {
-    try {
-      state.loading.appointments = true
-      state.errors.appointments = null
-      const response = await http.get('/api/admin/appointments')
-      state.appointments = response.data
-      return response.data
-    } catch (error) {
-      state.errors.appointments = error.response?.data?.detail || error.message
-      console.error('Failed to fetch appointments:', error)
-      return []
-    } finally {
-      state.loading.appointments = false
+    const fetchAppointments = async () => {
+        try {
+            state.loading.appointments = true
+            state.errors.appointments = null
+            const response = await http.get('/api/admin/appointments')
+            state.appointments = response.data
+            return response.data
+        } catch (error) {
+            state.errors.appointments = error.response?.data?.detail || error.message
+            console.error('Failed to fetch appointments:', error)
+            return []
+        } finally {
+            state.loading.appointments = false
+        }
     }
-  }
 
-  const fetchDoctorSchedule = async (doctorId) => {
-    try {
-      const response = await http.get(`/api/admin/schedule/${doctorId}`)
-      return response.data.map(schedule => ({
-        id: schedule.id,
-        doctor_id: schedule.doctor_id,
-        date: schedule.date,
-        startTime: schedule.start_time,
-        endTime: schedule.end_time,
-        appointmentCount: schedule.slots_count,
-        bookedCount: schedule.booked_count || 0,
-        officeNumber: schedule.office_number,
-        isActive: schedule.is_available ?? true
-      }))
-    } catch (error) {
-      console.error(`Failed to fetch schedule for doctor ${doctorId}:`, error)
-      return []
+    const fetchDoctorSchedule = async (doctorId) => {
+        try {
+            const response = await http.get(`/api/admin/schedule/${doctorId}`)
+            return response.data.map(schedule => ({
+                id: schedule.id,
+                doctor_id: schedule.doctor_id,
+                date: schedule.date,
+                startTime: schedule.start_time,
+                endTime: schedule.end_time,
+                appointmentCount: schedule.slots_count,
+                bookedCount: schedule.booked_count || 0,
+                officeId: schedule.office_id,
+                officeNumber: schedule.office?.number || schedule.office_number,
+                isActive: schedule.is_available ?? true
+            }))
+        } catch (error) {
+            console.error(`Failed to fetch schedule for doctor ${doctorId}:`, error)
+            return []
+        }
     }
-  }
 
-  // ==================== COMPUTED ====================
+    // ==================== OFFICES ====================
 
-  const todayAppointments = computed(() => {
-    const today = new Date().toISOString().split('T')[0]
-    return state.appointments.filter(a => a.date === today).length
-  })
-
-  const scheduledToday = computed(() => {
-    const today = new Date().toISOString().split('T')[0]
-    return state.appointments.filter(a => a.date === today && a.status === 'scheduled').length
-  })
-
-  const totalRevenue = computed(() => {
-    return state.billings
-      .filter(b => b.status === 'Paid')
-      .reduce((sum, b) => sum + b.amount, 0)
-  })
-
-  const monthlyRevenue = computed(() => {
-    const currentMonth = new Date().getMonth()
-    return state.billings
-      .filter(b => {
-        const billMonth = new Date(b.date).getMonth()
-        return b.status === 'Paid' && billMonth === currentMonth
-      })
-      .reduce((sum, b) => sum + b.amount, 0)
-  })
-
-  // ==================== SPECIALIZATIONS ====================
-
-  const addSpecialization = async (specialization) => {
-    try {
-      const response = await http.post('/api/admin/specializations', specialization)
-      await fetchSpecializations()
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Add specialization')
+    const fetchOffices = async () => {
+        try {
+            state.loading.offices = true
+            state.errors.offices = null
+            const response = await http.get('/api/admin/offices')
+            state.offices = response.data
+            return response.data
+        } catch (error) {
+            state.errors.offices = error.response?.data?.detail || error.message
+            console.error('Failed to fetch offices:', error)
+            return []
+        } finally {
+            state.loading.offices = false
+        }
     }
-  }
 
-  // ==================== SCHEDULE FUNCTIONS ====================
-
-  const getDoctorSchedules = (doctorId) => {
-    return computed(() => state.schedules.filter(s => s.doctor_id === doctorId))
-  }
-
-  const getAllSchedules = () => {
-    return computed(() => state.schedules)
-  }
-
-  const addSchedule = async (schedule) => {
-    try {
-      const response = await http.post('/api/admin/schedule', schedule)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Add schedule')
+    const addOffice = async (office) => {
+        try {
+            const response = await http.post('/api/admin/offices', office)
+            await fetchOffices()
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add office')
+        }
     }
-  }
 
-  const addScheduleBatch = async (batchSchedule) => {
-    try {
-      const response = await http.post('/api/admin/schedule/batch', batchSchedule)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Add batch schedule')
+    const deleteOffice = async (id) => {
+        try {
+            await http.delete(`/api/admin/offices/${id}`)
+            await fetchOffices()
+        } catch (error) {
+            handleApiError(error, 'Delete office')
+        }
     }
-  }
 
-  const updateSchedule = async (id, data) => {
-    try {
-      const response = await http.put(`/api/admin/schedule/${id}`, data)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Update schedule')
+    // ==================== COMPUTED ====================
+
+    const offices = computed(() => state.offices || [])
+
+    const todayAppointments = computed(() => {
+        const today = new Date().toISOString().split('T')[0]
+        return state.appointments.filter(a => a.date === today).length
+    })
+
+    const scheduledToday = computed(() => {
+        const today = new Date().toISOString().split('T')[0]
+        return state.appointments.filter(a => a.date === today && a.status === 'scheduled').length
+    })
+
+    const totalRevenue = computed(() => {
+        return state.billings
+            .filter(b => b.status === 'Paid')
+            .reduce((sum, b) => sum + b.amount, 0)
+    })
+
+    const monthlyRevenue = computed(() => {
+        const currentMonth = new Date().getMonth()
+        return state.billings
+            .filter(b => {
+                const billMonth = new Date(b.date).getMonth()
+                return b.status === 'Paid' && billMonth === currentMonth
+            })
+            .reduce((sum, b) => sum + b.amount, 0)
+    })
+
+    // ==================== SPECIALIZATIONS ====================
+
+    const addSpecialization = async (specialization) => {
+        try {
+            const response = await http.post('/api/admin/specializations', specialization)
+            await fetchSpecializations()
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add specialization')
+        }
     }
-  }
 
-  const deleteSchedule = async (id) => {
-    try {
-      await http.delete(`/api/admin/schedule/${id}`)
-    } catch (error) {
-      handleApiError(error, 'Delete schedule')
+    // ==================== SCHEDULE FUNCTIONS ====================
+
+    const getDoctorSchedules = (doctorId) => {
+        return computed(() => state.schedules.filter(s => s.doctor_id === doctorId))
     }
-  }
 
-  const toggleScheduleStatus = async (id) => {
-    try {
-      const response = await http.patch(`/api/admin/schedules/${id}/`)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Toggle schedule status')
+    const getAllSchedules = () => {
+        return computed(() => state.schedules)
     }
-  }
 
-  const getAppointmentCount = (scheduleId) => {
-    return state.appointments.filter(a =>
-      a.schedule_id === scheduleId &&
-      a.status !== 'cancelled'
-    ).length
-  }
-
-  // ==================== CRUD - PATIENTS ====================
-
-  const registerPatient = async (patientData) => {
-    try {
-      state.loading.general = true
-      const response = await http.post('/api/patient/register', patientData)
-      const { access_token, user_type } = response.data
-      localStorage.setItem('access_token', access_token)
-      localStorage.setItem('user_type', user_type)
-      state.userType = user_type
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Patient registration')
-    } finally {
-      state.loading.general = false
+    const addSchedule = async (schedule) => {
+        try {
+            const response = await http.post('/api/admin/schedule', schedule)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add schedule')
+        }
     }
-  }
 
-  const addPatient = async (patient) => {
-    return await registerPatient(patient)
-  }
-
-  const updatePatient = async (id, data) => {
-    try {
-      const response = await http.put(`/api/admin/patient/${id}`, data)
-      await fetchPatients()
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Update patient')
+    const addScheduleBatch = async (batchSchedule) => {
+        try {
+            const response = await http.post('/api/admin/schedule/batch', batchSchedule)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add batch schedule')
+        }
     }
-  }
 
-  const deletePatient = async (id) => {
-    try {
-      await http.delete(`/api/admin/patient/${id}`)
-      await fetchPatients()
-    } catch (error) {
-      handleApiError(error, 'Delete patient')
+    const updateSchedule = async (id, data) => {
+        try {
+            const response = await http.put(`/api/admin/schedule/${id}`, data)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Update schedule')
+        }
     }
-  }
 
-  // ==================== CRUD - DOCTORS ====================
-
-  const addDoctor = async (doctor) => {
-    try {
-      state.loading.general = true
-      const response = await http.post('/api/admin/doctor', doctor)
-      await fetchDoctors()
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Add doctor')
-    } finally {
-      state.loading.general = false
+    const deleteSchedule = async (id) => {
+        try {
+            await http.delete(`/api/admin/schedule/${id}`)
+        } catch (error) {
+            handleApiError(error, 'Delete schedule')
+        }
     }
-  }
 
-  const updateDoctor = async (id, data) => {
-    try {
-      const response = await http.put(`/api/admin/doctor/${id}`, data)
-      await fetchDoctors()
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Update doctor')
+    const toggleScheduleStatus = async (id) => {
+        try {
+            const response = await http.patch(`/api/admin/schedules/${id}/`)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Toggle schedule status')
+        }
     }
-  }
 
-  const deleteDoctor = async (id) => {
-    try {
-      await http.delete(`/api/admin/doctor/${id}`)
-      await fetchDoctors()
-    } catch (error) {
-      handleApiError(error, 'Delete doctor')
+    const getAppointmentCount = (scheduleId) => {
+        return state.appointments.filter(a =>
+            a.schedule_id === scheduleId &&
+            a.status !== 'cancelled'
+        ).length
     }
-  }
 
-  const searchDoctors = async (searchTerm) => {
-    try {
-      const response = await http.get(`/api/admin/doctors/search/${searchTerm}`)
-      return response.data
-    } catch (error) {
-      console.error('Failed to search doctors:', error)
-      return []
+    // ==================== CRUD - PATIENTS ====================
+
+    const registerPatient = async (patientData) => {
+        try {
+            state.loading.general = true
+            const response = await http.post('/api/patient/register', patientData)
+            const { access_token, user_type } = response.data
+            localStorage.setItem('access_token', access_token)
+            localStorage.setItem('user_type', user_type)
+            state.userType = user_type
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Patient registration')
+        } finally {
+            state.loading.general = false
+        }
     }
-  }
 
-  // ==================== CRUD - APPOINTMENTS ====================
-
-  const deleteAppointment = async (id) => {
-    try {
-      await http.delete(`/api/admin/appointments/${id}`)
-      await fetchAppointments()
-    } catch (error) {
-      handleApiError(error, 'Delete appointment')
+    const addPatient = async (patient) => {
+        return await registerPatient(patient)
     }
-  }
 
-  // ==================== CRUD - BILLING ====================
-
-  const addBilling = async (billing) => {
-    try {
-      const response = await http.post('/api/admin/billings', billing)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Add billing')
+    const updatePatient = async (id, data) => {
+        try {
+            const response = await http.put(`/api/admin/patient/${id}`, data)
+            await fetchPatients()
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Update patient')
+        }
     }
-  }
 
-  const markBillingPaid = async (id) => {
-    try {
-      const response = await http.patch(`/api/admin/billings/${id}/pay`)
-      return response.data
-    } catch (error) {
-      handleApiError(error, 'Mark billing paid')
+    const deletePatient = async (id) => {
+        try {
+            await http.delete(`/api/admin/patient/${id}`)
+            await fetchPatients()
+        } catch (error) {
+            handleApiError(error, 'Delete patient')
+        }
     }
-  }
 
-  // ==================== INITIALIZATION ====================
+    // ==================== CRUD - DOCTORS ====================
 
-  const initializeData = async () => {
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      state.userType = 'admin'
-      try {
-        await Promise.all([
-          fetchPatients(),
-          fetchDoctors(),
-          fetchAppointments(),
-          fetchSpecializations()
-        ])
-      } catch (error) {
-        console.error('Failed to initialize admin data:', error)
-      }
+    const addDoctor = async (doctor) => {
+        try {
+            state.loading.general = true
+            const response = await http.post('/api/admin/doctor', doctor)
+            await fetchDoctors()
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add doctor')
+        } finally {
+            state.loading.general = false
+        }
     }
-  }
 
-  return {
-    ...core,
+    const updateDoctor = async (id, data) => {
+        try {
+            const response = await http.put(`/api/admin/doctor/${id}`, data)
+            await fetchDoctors()
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Update doctor')
+        }
+    }
 
-    // Computed
-    todayAppointments,
-    scheduledToday,
-    totalRevenue,
-    monthlyRevenue,
+    const deleteDoctor = async (id) => {
+        try {
+            await http.delete(`/api/admin/doctor/${id}`)
+            await fetchDoctors()
+        } catch (error) {
+            handleApiError(error, 'Delete doctor')
+        }
+    }
 
-    // Fetch
-    fetchPatients,
-    fetchDoctors,
-    fetchAppointments,
-    fetchSpecializations,
-    fetchDoctorSchedule,
-    initializeData,
+    const searchDoctors = async (searchTerm) => {
+        try {
+            const response = await http.get(`/api/admin/doctors/search/${searchTerm}`)
+            return response.data
+        } catch (error) {
+            console.error('Failed to search doctors:', error)
+            return []
+        }
+    }
 
-    // Specializations
-    addSpecialization,
+    // ==================== CRUD - APPOINTMENTS ====================
 
-    // Schedule
-    getDoctorSchedules,
-    getAllSchedules,
-    addSchedule,
-    addScheduleBatch,
-    updateSchedule,
-    deleteSchedule,
-    toggleScheduleStatus,
-    getAppointmentCount,
+    const deleteAppointment = async (id) => {
+        try {
+            await http.delete(`/api/admin/appointments/${id}`)
+            await fetchAppointments()
+        } catch (error) {
+            handleApiError(error, 'Delete appointment')
+        }
+    }
 
-    // Patients CRUD
-    addPatient,
-    updatePatient,
-    deletePatient,
+    // ==================== CRUD - BILLING ====================
 
-    // Doctors CRUD
-    addDoctor,
-    updateDoctor,
-    deleteDoctor,
-    searchDoctors,
+    const addBilling = async (billing) => {
+        try {
+            const response = await http.post('/api/admin/billings', billing)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Add billing')
+        }
+    }
 
-    // Appointments
-    deleteAppointment,
+    const markBillingPaid = async (id) => {
+        try {
+            const response = await http.patch(`/api/admin/billings/${id}/pay`)
+            return response.data
+        } catch (error) {
+            handleApiError(error, 'Mark billing paid')
+        }
+    }
 
-    // Billing
-    addBilling,
-    markBillingPaid,
-    fetchAdminDoctorSchedule
-  }
+    // ==================== INITIALIZATION ====================
+
+    const initializeData = async () => {
+        const token = localStorage.getItem('access_token')
+        if (token) {
+            state.userType = 'admin'
+            try {
+                await Promise.all([
+                    fetchPatients(),
+                    fetchDoctors(),
+                    fetchAppointments(),
+                    fetchSpecializations(),
+                    fetchOffices()
+                ])
+            } catch (error) {
+                console.error('Failed to initialize admin data:', error)
+            }
+        }
+    }
+
+    return {
+        ...core,
+
+        // Computed
+        offices,
+        todayAppointments,
+        scheduledToday,
+        totalRevenue,
+        monthlyRevenue,
+
+        // Fetch
+        fetchPatients,
+        fetchDoctors,
+        fetchAppointments,
+        fetchSpecializations,
+        fetchDoctorSchedule,
+        fetchOffices,
+        initializeData,
+
+        // Specializations
+        addSpecialization,
+
+        // Offices
+        addOffice,
+        deleteOffice,
+
+        // Schedule
+        getDoctorSchedules,
+        getAllSchedules,
+        addSchedule,
+        addScheduleBatch,
+        updateSchedule,
+        deleteSchedule,
+        toggleScheduleStatus,
+        getAppointmentCount,
+
+        // Patients CRUD
+        addPatient,
+        updatePatient,
+        deletePatient,
+
+        // Doctors CRUD
+        addDoctor,
+        updateDoctor,
+        deleteDoctor,
+        searchDoctors,
+
+        // Appointments
+        deleteAppointment,
+
+        // Billing
+        addBilling,
+        markBillingPaid,
+        fetchAdminDoctorSchedule
+    }
 }
