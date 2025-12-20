@@ -6,8 +6,8 @@
         <i class="fas fa-calendar-alt text-indigo-500 mr-2"></i>Doctor Schedules
       </h2>
       <button
-        @click="openAddModal"
-        class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg transition"
+          @click="openAddModal"
+          class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-indigo-700 hover:to-purple-700 shadow-lg transition"
       >
         <i class="fas fa-plus mr-2"></i>Add Schedule
       </button>
@@ -22,14 +22,14 @@
     <!-- Doctor List -->
     <div v-else class="space-y-4">
       <div
-        v-for="item in doctorSchedules"
-        :key="item.doctor.id"
-        class="bg-white rounded-2xl shadow-lg overflow-hidden"
+          v-for="item in doctorSchedules"
+          :key="item.doctor.id"
+          class="bg-white rounded-2xl shadow-lg overflow-hidden"
       >
         <!-- Doctor Header (Clickable) -->
         <div
-          @click="toggleDoctor(item.doctor.id)"
-          class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4 cursor-pointer hover:from-indigo-600 hover:to-purple-700 transition"
+            @click="toggleDoctor(item.doctor.id)"
+            class="bg-gradient-to-r from-indigo-500 to-purple-600 p-4 cursor-pointer hover:from-indigo-600 hover:to-purple-700 transition"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center">
@@ -44,7 +44,7 @@
             <div class="flex items-center text-white">
               <div class="text-right mr-4">
                 <p class="text-sm text-indigo-100">Total</p>
-                <p class="font-bold">{{ item.schedules.length }} appointments</p>  <!-- ✅ Changed -->
+                <p class="font-bold">{{ item.schedules.length }} appointments</p>
               </div>
               <i :class="['fas text-xl transition-transform', isExpanded(item.doctor.id) ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
             </div>
@@ -62,9 +62,9 @@
           <!-- Schedule Items -->
           <ul v-else class="space-y-3">
             <li
-              v-for="schedule in item.schedules"
-              :key="schedule.id"
-              class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
+                v-for="schedule in item.schedules"
+                :key="schedule.id"
+                class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition"
             >
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-6">
@@ -88,21 +88,21 @@
 
                   <!-- Status -->
                   <span
-                    :class="[
-            'px-3 py-1 rounded-full text-xs font-semibold',
-            schedule.isActive
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          ]"
+                      :class="[
+                      'px-3 py-1 rounded-full text-xs font-semibold',
+                      schedule.isActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    ]"
                   >
-          {{ schedule.isActive ? 'Active' : 'Inactive' }}
-        </span>
+                    {{ schedule.isActive ? 'Active' : 'Inactive' }}
+                  </span>
                 </div>
 
                 <!-- Delete Button -->
                 <button
-                  @click="handleDelete(schedule.id)"
-                  class="text-red-600 hover:text-red-800 p-2"
+                    @click="handleDelete(schedule.id)"
+                    class="text-red-600 hover:text-red-800 p-2"
                 >
                   <i class="fas fa-trash"></i>
                 </button>
@@ -115,9 +115,9 @@
 
     <!-- Add Modal -->
     <div
-      v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      @click.self="closeModal"
+        v-if="showModal"
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        @click.self="closeModal"
     >
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 mx-4">
         <div class="flex justify-between items-center mb-6">
@@ -132,9 +132,9 @@
           <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2">Doctor</label>
             <select
-              v-model="form.doctorId"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                v-model="form.doctorId"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Select doctor...</option>
               <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
@@ -147,23 +147,30 @@
           <div class="mb-4">
             <label class="block text-gray-700 text-sm font-bold mb-2">Date</label>
             <input
-              v-model="form.date"
-              type="date"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                v-model="form.date"
+                type="date"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
           </div>
 
-          <!-- Office -->
+          <!-- Office Dropdown -->
           <div class="mb-4">
-            <label class="block text-gray-700 text-sm font-bold mb-2">Office Number</label>
-            <input
-              v-model="form.officeNumber"
-              type="text"
-              required
-              placeholder="e.g., 101"
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <label class="block text-gray-700 text-sm font-bold mb-2">Office</label>
+            <select
+                v-model="form.officeId"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
+              <option value="">Select office...</option>
+              <option v-for="office in offices" :key="office.id" :value="office.id">
+                Office {{ office.number }}, Id: {{office.id}}
+              </option>
+            </select>
+            <p v-if="offices.length === 0" class="text-red-500 text-xs mt-1">
+              <i class="fas fa-exclamation-circle mr-1"></i>
+              No offices available. Please add offices first.
+            </p>
           </div>
 
           <!-- Time -->
@@ -171,19 +178,19 @@
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">Start Time</label>
               <input
-                v-model="form.startTime"
-                type="time"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  v-model="form.startTime"
+                  type="time"
+                  required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
             </div>
             <div>
               <label class="block text-gray-700 text-sm font-bold mb-2">End Time</label>
               <input
-                v-model="form.endTime"
-                type="time"
-                required
-                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  v-model="form.endTime"
+                  type="time"
+                  required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
             </div>
           </div>
@@ -192,26 +199,27 @@
           <div class="mb-6">
             <label class="block text-gray-700 text-sm font-bold mb-2">Number of Appointments</label>
             <input
-              v-model.number="form.appointmentCount"
-              type="number"
-              min="1"
-              required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                v-model.number="form.appointmentCount"
+                type="number"
+                min="1"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
           </div>
 
           <!-- Buttons -->
           <div class="flex gap-4">
             <button
-              type="button"
-              @click="closeModal"
-              class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                type="button"
+                @click="closeModal"
+                class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                type="submit"
+                :disabled="offices.length === 0"
+                class="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Add Schedule
             </button>
@@ -221,6 +229,7 @@
     </div>
   </div>
 </template>
+
 <script>
 import { ref, onMounted } from 'vue'
 import { useAdminData } from '../../composables/useAdminData'
@@ -230,6 +239,7 @@ export default {
   setup() {
     const {
       doctors,
+      offices,
       initializeData,
       fetchAdminDoctorSchedule,
       addScheduleBatch,
@@ -245,7 +255,7 @@ export default {
       startTime: '09:00',
       endTime: '17:00',
       appointmentCount: 16,
-      officeNumber: '101'
+      officeId: ''
     })
 
     const toggleDoctor = (doctorId) => {
@@ -282,7 +292,7 @@ export default {
 
     const formatTime = (timeString) => {
       if (!timeString) return ''
-      return timeString.slice(0, 5)  // "21:48:12.738Z" → "21:48"
+      return timeString.slice(0, 5)
     }
 
     const openAddModal = () => {
@@ -292,7 +302,7 @@ export default {
         startTime: '09:00',
         endTime: '17:00',
         appointmentCount: 16,
-        officeNumber: '101'
+        officeId: ''
       }
       showModal.value = true
     }
@@ -306,10 +316,10 @@ export default {
         const data = {
           doctor_id: parseInt(form.value.doctorId),
           date: form.value.date,
-          start_time: form.value.startTime,        // ✅ Send as "09:00"
-          end_time: form.value.endTime,            // ✅ Send as "17:00"
+          start_time: form.value.startTime,
+          end_time: form.value.endTime,
           slots_count: parseInt(form.value.appointmentCount),
-          office_number: form.value.officeNumber
+          office_id: parseInt(form.value.officeId)
         }
         console.log(data)
         await addScheduleBatch(data)
@@ -340,6 +350,7 @@ export default {
 
     return {
       doctors,
+      offices,
       doctorSchedules,
       showModal,
       form,
