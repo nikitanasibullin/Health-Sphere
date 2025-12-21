@@ -22,8 +22,14 @@
         </button>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="isLoadingAppointments" class="text-center py-12">
+        <i class="fas fa-spinner fa-spin text-4xl text-purple-500 mb-4"></i>
+        <p class="text-gray-600">Loading appointments...</p>
+      </div>
+
       <!-- Appointments List -->
-      <div v-if="filteredAppointments.length === 0" class="text-center py-12 text-gray-500">
+      <div v-else-if="filteredAppointments.length === 0" class="text-center py-12 text-gray-500">
         <i class="fas fa-calendar-times text-4xl mb-4"></i>
         <p>No {{ activeFilter === 'all' ? '' : activeFilter.toLowerCase() }} appointments found</p>
       </div>
@@ -143,101 +149,136 @@
           </div>
 
           <!-- Appointment Information/Notes -->
-          <div v-if="appointmentDetails.information" class="border border-gray-200 rounded-xl p-5">
+          <div v-if="selectedAppointment?.information" class="border border-gray-200 rounded-xl p-5">
             <h5 class="font-bold text-gray-800 mb-3 flex items-center">
               <i class="fas fa-notes-medical text-blue-500 mr-2"></i>
               Doctor's Notes
             </h5>
             <p class="text-gray-700 whitespace-pre-line bg-blue-50 p-4 rounded-lg">
-              {{ appointmentDetails.information }}
+              {{ selectedAppointment.information }}
             </p>
           </div>
 
-          <!-- Prescriptions Section -->
+          <!-- My Medications Section -->
           <div class="border border-gray-200 rounded-xl p-5">
             <h5 class="font-bold text-gray-800 mb-4 flex items-center">
               <i class="fas fa-prescription-bottle text-green-500 mr-2"></i>
-              Prescriptions
+              My Current Medications
               <span class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                {{ appointmentDetails.prescriptions?.length || 0 }}
+                {{ medicationReport?.current_medicaments?.length || 0 }}
               </span>
             </h5>
 
-            <div v-if="!appointmentDetails.prescriptions?.length" class="text-center py-6 text-gray-500">
+            <div v-if="!medicationReport?.current_medicaments?.length" class="text-center py-6 text-gray-500">
               <i class="fas fa-pills text-3xl mb-2 text-gray-300"></i>
-              <p>No prescriptions for this appointment</p>
+              <p>No medications prescribed</p>
             </div>
 
             <div v-else class="space-y-4">
               <div
-                  v-for="(prescription, index) in appointmentDetails.prescriptions"
+                  v-for="(medication, index) in medicationReport.current_medicaments"
                   :key="index"
-                  class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg p-4 border border-green-200"
+                  :class="[
+                    'rounded-lg p-4 border',
+                    medication.is_active
+                      ? 'bg-gradient-to-r from-green-50 to-teal-50 border-green-200'
+                      : 'bg-gray-50 border-gray-300'
+                  ]"
               >
                 <div class="flex justify-between items-start mb-3">
                   <div class="flex items-center">
-                    <div class="w-10 h-10 bg-gradient-to-r from-green-400 to-teal-400 rounded-full flex items-center justify-center mr-3">
+                    <div :class="[
+                      'w-10 h-10 rounded-full flex items-center justify-center mr-3',
+                      medication.is_active
+                        ? 'bg-gradient-to-r from-green-400 to-teal-400'
+                        : 'bg-gray-400'
+                    ]">
                       <i class="fas fa-capsules text-white"></i>
                     </div>
                     <div>
-                      <h6 class="font-bold text-gray-800">{{ prescription.medicament_name || prescription.name }}</h6>
-                      <span :class="getPrescriptionStatusClass(prescription)">
-                        {{ getPrescriptionStatus(prescription) }}
+                      <h6 class="font-bold text-gray-800">{{ medication.medicament_name }}</h6>
+                      <span :class="[
+                        'px-2 py-0.5 rounded-full text-xs font-semibold',
+                        medication.is_active
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-500'
+                      ]">
+                        {{ medication.is_active ? 'Active' : 'Inactive' }}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3 text-sm">
-                  <div v-if="prescription.dosage" class="p-2 bg-white rounded-lg">
+                  <div v-if="medication.dosage" class="p-2 bg-white rounded-lg">
                     <p class="text-xs text-gray-500 font-semibold">Dosage</p>
-                    <p class="text-gray-800">{{ prescription.dosage }}</p>
+                    <p class="text-gray-800">{{ medication.dosage }}</p>
                   </div>
-                  <div v-if="prescription.frequency" class="p-2 bg-white rounded-lg">
+                  <div v-if="medication.frequency" class="p-2 bg-white rounded-lg">
                     <p class="text-xs text-gray-500 font-semibold">Frequency</p>
-                    <p class="text-gray-800">{{ prescription.frequency }}</p>
+                    <p class="text-gray-800">{{ medication.frequency }}</p>
                   </div>
-                  <div v-if="prescription.start_date" class="p-2 bg-white rounded-lg">
+                  <div v-if="medication.start_date" class="p-2 bg-white rounded-lg">
                     <p class="text-xs text-gray-500 font-semibold">Start Date</p>
-                    <p class="text-gray-800">{{ formatShortDate(prescription.start_date) }}</p>
+                    <p class="text-gray-800">{{ formatShortDate(medication.start_date) }}</p>
                   </div>
-                  <div v-if="prescription.end_date" class="p-2 bg-white rounded-lg">
+                  <div v-if="medication.end_date" class="p-2 bg-white rounded-lg">
                     <p class="text-xs text-gray-500 font-semibold">End Date</p>
-                    <p class="text-gray-800">{{ formatShortDate(prescription.end_date) }}</p>
+                    <p class="text-gray-800">{{ formatShortDate(medication.end_date) }}</p>
                   </div>
                 </div>
 
-                <div v-if="prescription.notes" class="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div v-if="medication.notes" class="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                   <p class="text-sm text-gray-700">
                     <i class="fas fa-sticky-note text-yellow-500 mr-1"></i>
-                    <strong>Notes:</strong> {{ prescription.notes }}
+                    <strong>Notes:</strong> {{ medication.notes }}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Contraindications Section -->
-          <div v-if="appointmentDetails.contraindications?.length" class="border border-red-200 rounded-xl p-5 bg-red-50">
+          <!-- Contraindications -->
+          <div v-if="medicationReport?.forbidden_medicaments?.length || medicationReport?.forbidden_activities?.length"
+               class="border border-red-200 rounded-xl p-5 bg-red-50">
             <h5 class="font-bold text-gray-800 mb-4 flex items-center">
               <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
               Contraindications & Warnings
             </h5>
-            <div class="flex flex-wrap gap-2">
-              <span
-                  v-for="(contra, index) in appointmentDetails.contraindications"
-                  :key="index"
-                  class="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-semibold flex items-center"
-              >
-                <i class="fas fa-ban mr-2"></i>
-                {{ typeof contra === 'string' ? contra : contra.contradiction || contra.name }}
-              </span>
+
+            <!-- Forbidden Medicaments -->
+            <div v-if="medicationReport.forbidden_medicaments?.length" class="mb-4">
+              <p class="text-sm font-semibold text-gray-700 mb-2">Medications to Avoid:</p>
+              <div class="space-y-2">
+                <div
+                    v-for="(forbidden, idx) in medicationReport.forbidden_medicaments"
+                    :key="idx"
+                    class="bg-white p-3 rounded-lg border border-red-200"
+                >
+                  <p class="font-semibold text-red-700">{{ forbidden.medicament_name }}</p>
+                  <p class="text-sm text-gray-600">{{ forbidden.reason }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Forbidden Activities -->
+            <div v-if="medicationReport.forbidden_activities?.length">
+              <p class="text-sm font-semibold text-gray-700 mb-2">Other Contraindications:</p>
+              <div class="flex flex-wrap gap-2">
+                <span
+                    v-for="(activity, idx) in medicationReport.forbidden_activities"
+                    :key="idx"
+                    class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold"
+                >
+                  {{ activity.contraindication_name }}
+                </span>
+              </div>
             </div>
           </div>
 
           <!-- No Additional Details Message -->
           <div
-              v-if="!appointmentDetails.information && !appointmentDetails.prescriptions?.length && !appointmentDetails.contraindications?.length"
+              v-if="!selectedAppointment?.information && !medicationReport?.current_medicaments?.length"
               class="text-center py-8 text-gray-500"
           >
             <i class="fas fa-info-circle text-4xl mb-3 text-gray-300"></i>
@@ -286,12 +327,9 @@ export default {
     const activeFilter = ref('all')
     const showDetailsModal = ref(false)
     const selectedAppointment = ref(null)
+    const isLoadingAppointments = ref(false)
     const isLoadingDetails = ref(false)
-    const appointmentDetails = ref({
-      information: '',
-      prescriptions: [],
-      contraindications: []
-    })
+    const medicationReport = ref(null)
 
     const filters = [
       { label: 'All', value: 'all' },
@@ -351,84 +389,19 @@ export default {
       return classes[status] || classes['scheduled']
     }
 
-    const getPrescriptionStatus = (prescription) => {
-      if (prescription.is_active === false) return 'Expired'
-
-      const today = new Date()
-      const startDate = new Date(prescription.start_date)
-      const endDate = new Date(prescription.end_date)
-      if (startDate > today) return 'Upcoming'
-      return today > endDate ? 'Expired' : 'Active'
-    }
-
-    const getPrescriptionStatusClass = (prescription) => {
-      const status = getPrescriptionStatus(prescription)
-      const classes = {
-        'Active': 'px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-semibold',
-        'Upcoming': 'px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold',
-        'Expired': 'px-2 py-0.5 bg-white text-gray-500 border border-gray-300 rounded-full text-xs font-semibold'
-      }
-      return classes[status]
-    }
-
     const openDetailsModal = async (appointment) => {
       selectedAppointment.value = appointment
       showDetailsModal.value = true
       isLoadingDetails.value = true
 
       try {
-        // Get medication data using existing function
-        const medicationData = await getPatientMedication()
-        console.log('Medication data:', medicationData)
-
-        // Extract prescriptions - handle different API response structures
-        let prescriptions = []
-
-        if (medicationData) {
-          if (medicationData.medicaments && Array.isArray(medicationData.medicaments)) {
-            // If API returns { medicaments: [...] }
-            prescriptions = medicationData.medicaments
-          } else if (Array.isArray(medicationData)) {
-            // If API returns array directly
-            prescriptions = medicationData
-          }
-
-          // Filter prescriptions for this specific appointment if there's appointment_id
-          if (prescriptions.length > 0 && prescriptions[0].appointment_id !== undefined) {
-            prescriptions = prescriptions.filter(p => p.appointment_id === appointment.id)
-          }
-        }
-
-        // Extract contraindications from medication data
-        let contraindications = []
-        if (medicationData) {
-          if (medicationData.direct_contraindications) {
-            contraindications = [...contraindications, ...medicationData.direct_contraindications]
-          }
-          if (medicationData.medicament_based_contraindications) {
-            contraindications = [...contraindications, ...medicationData.medicament_based_contraindications]
-          }
-          if (medicationData.contraindications && Array.isArray(medicationData.contraindications)) {
-            contraindications = medicationData.contraindications
-          }
-        }
-
-        // Set appointment details
-        appointmentDetails.value = {
-          information: appointment.information || '',
-          prescriptions: prescriptions,
-          contraindications: contraindications
-        }
-
-        console.log('Appointment details:', appointmentDetails.value)
-
+        // Get all patient medications using existing API
+        const report = await getPatientMedication()
+        medicationReport.value = report
+        console.log('Medication report:', report)
       } catch (error) {
-        console.error('Error fetching appointment details:', error)
-        appointmentDetails.value = {
-          information: appointment.information || '',
-          prescriptions: [],
-          contraindications: []
-        }
+        console.error('Error fetching medication details:', error)
+        medicationReport.value = null
       } finally {
         isLoadingDetails.value = false
       }
@@ -437,24 +410,38 @@ export default {
     const closeDetailsModal = () => {
       showDetailsModal.value = false
       selectedAppointment.value = null
-      appointmentDetails.value = {
-        information: '',
-        prescriptions: [],
-        contraindications: []
-      }
+      medicationReport.value = null
     }
 
     const handleCancelAppointment = async (appointmentId) => {
       if (confirm('Are you sure you want to cancel this appointment?')) {
-        await cancelAppointment(appointmentId)
-        // Refresh appointments list
+        try {
+          await cancelAppointment(appointmentId)
+          // Refresh appointments list
+          await loadAppointments()
+          alert('Appointment cancelled successfully!')
+        } catch (error) {
+          console.error('Error cancelling appointment:', error)
+          alert('Failed to cancel appointment')
+        }
+      }
+    }
+
+    const loadAppointments = async () => {
+      isLoadingAppointments.value = true
+      try {
         myAppointments.value = await getPatientAppointments() || []
+      } catch (error) {
+        console.error('Error loading appointments:', error)
+        myAppointments.value = []
+      } finally {
+        isLoadingAppointments.value = false
       }
     }
 
     onMounted(async () => {
       await initializeData()
-      myAppointments.value = await getPatientAppointments() || []
+      await loadAppointments()
     })
 
     return {
@@ -466,13 +453,12 @@ export default {
       formatShortDate,
       capitalizeStatus,
       getStatusClass,
-      getPrescriptionStatus,
-      getPrescriptionStatusClass,
       handleCancelAppointment,
       showDetailsModal,
       selectedAppointment,
+      isLoadingAppointments,
       isLoadingDetails,
-      appointmentDetails,
+      medicationReport,
       openDetailsModal,
       closeDetailsModal
     }
