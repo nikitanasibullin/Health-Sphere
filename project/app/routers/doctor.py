@@ -681,6 +681,51 @@ def add_medicaments_for_appointment(
     
     return response
 
+@router.get("/appointments/{appointment_id}/medicaments", 
+            response_model=List[schemas.PatientMedicamentResponse])
+@exceptions.handle_exceptions(custom_message="Не удалось получить лекарства назначения")
+def get_appointment_medicaments(
+    appointment_id: int,
+    current_doctor: models.Doctor = Depends(oauth2.get_current_doctor),
+    db: Session = Depends(get_db)
+):
+    """
+    Получить все лекарства, назначенные на конкретном приеме.
+    Только врач, который вел этот прием, может просматривать назначения.
+    """
+    # Проверяем существование приема
+    appointment = db.query(models.Appointment)\
+        .filter(models.Appointment.id == appointment_id)\
+        .first()
+    
+    if not appointment:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Прием с ID {appointment_id} не найден"
+        )
+    
+    # Проверяем, что прием относится к текущему доктору
+    schedule = db.query(models.Schedule)\
+        .filter(models.Schedule.id == appointment.schedule_id)\
+        .first()
+    
+    if not schedule or schedule.doctor_id != current_doctor.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Этот прием не относится к вашему расписанию"
+        )
+    
+    # Получаем все лекарства, назначенные на этом приеме
+    medicaments = db.query(models.PatientMedicament)\
+        .options(
+            joinedload(models.PatientMedicament.medicament)
+        )\
+        .filter(models.PatientMedicament.appointment_id == appointment_id)\
+        .order_by(models.PatientMedicament.start_date.desc())\
+        .all()
+    
+    # Преобразуем в формат ответа
+    return medicaments
 
     
 # Получение всех записей на прием к текущему доктору
