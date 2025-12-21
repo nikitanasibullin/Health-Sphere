@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 const http = axios.create({
-  baseURL: 'http://localhost:8000', // ✅ Порт вашего FastAPI backend
+  baseURL: 'https://localhost:8000',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -38,5 +38,4 @@ http.interceptors.response.use(
   }
 )
 
-// ✅ Экспортируем сам http, а не объект
 export default http

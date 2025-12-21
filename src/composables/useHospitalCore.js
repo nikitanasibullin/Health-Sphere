@@ -16,7 +16,7 @@ export const state = reactive({
   departments: [],
   recentActivities: [],
   specializations: [],
-
+  offices: [],
   loading: {
     patients: false,
     doctors: false,

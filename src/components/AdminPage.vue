@@ -30,10 +30,10 @@ import AdminDashboard from './admin/AdminDashboard.vue'
 import AdminPatients from './admin/AdminPatients.vue'
 import AdminDoctors from './admin/AdminDoctors.vue'
 import AdminAppointments from './admin/AdminAppointments.vue'
-import AdminRecords from './admin/AdminRecords.vue'
+//import AdminRecords from './admin/AdminRecords.vue'
 //import AdminBilling from './admin/AdminBilling.vue'
 import AdminSchedule from './admin/AdminSchedule.vue'  // NEW
-
+import AdminOffices from './admin/AdminOffices.vue'
 export default {
   name: 'AdminPage',
   components: {
@@ -42,9 +42,10 @@ export default {
     AdminPatients,
     AdminDoctors,
     AdminAppointments,
-    AdminRecords,
+    //AdminRecords,
     //AdminBilling,
-    AdminSchedule  // NEW
+    AdminSchedule,
+    AdminOffices
   },
   setup() {
     const router = useRouter()
@@ -59,7 +60,8 @@ export default {
       { id: 'doctors', name: 'Doctors', icon: 'fas fa-user-md' },
       { id: 'schedule', name: 'Schedules', icon: 'fas fa-calendar-alt' },  // NEW
       { id: 'appointments', name: 'Appointments', icon: 'fas fa-calendar-check' },
-      { id: 'records', name: 'Records', icon: 'fas fa-file-medical' },
+      {id: 'offices', name: 'Offices', icon: 'fas fa-building'}
+      //{ id: 'records', name: 'Records', icon: 'fas fa-file-medical' },
       //{ id: 'billing', name: 'Billing', icon: 'fas fa-file-invoice-dollar' }
     ]
 
@@ -77,6 +79,7 @@ export default {
 
       appointments: 'AdminAppointments',
       records: 'AdminRecords',
+      offices: 'AdminOffices',
       //billing: 'AdminBilling'
     }
 

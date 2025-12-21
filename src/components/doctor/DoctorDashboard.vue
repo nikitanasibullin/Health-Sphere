@@ -66,9 +66,9 @@
               <i class="fas fa-user text-white text-xl"></i>
             </div>
             <div>
-              <h4 class="font-bold text-gray-800">{{ getPatientName(apt.patient_id) }}</h4>
+              <h4 class="font-bold text-gray-800">{{ `${apt.patient.first_name} ${apt.patient.last_name} ${apt.patient.patronymic}` }}</h4>
               <p class="text-sm text-gray-600">
-                <i class="fas fa-clock mr-1"></i>{{ apt.schedule?.time_slot }} - {{ apt.reason || 'Consultation' }}
+                <i class="fas fa-clock mr-1"></i>{{ apt.schedule.start_time }}
               </p>
             </div>
           </div>

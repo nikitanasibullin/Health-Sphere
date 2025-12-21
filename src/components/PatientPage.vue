@@ -35,7 +35,7 @@ import PatientDashboard from './patient/PatientDashboard.vue'
 import PatientBookAppointment from './patient/PatientBookAppointment.vue'
 import PatientAppointments from './patient/PatientAppointments.vue'
 //import PatientHistory from './patient/PatientHistory.vue'
-import PatientPrescriptions from './patient/PatientPrescriptions.vue'
+//import PatientPrescriptions from './patient/PatientPrescriptions.vue'
 import { usePatientData } from '../composables/usePatientData'
 
 export default {
@@ -46,7 +46,7 @@ export default {
     PatientBookAppointment,
     PatientAppointments,
     //PatientHistory,
-    PatientPrescriptions
+    //PatientPrescriptions
   },
   setup() {
     const router = useRouter()
@@ -62,7 +62,7 @@ export default {
       { id: 'book', name: 'Book Appointment', icon: 'fas fa-calendar-plus' },
       { id: 'appointments', name: 'My Appointments', icon: 'fas fa-calendar-alt' },
       //{ id: 'history', name: 'Medical History', icon: 'fas fa-file-medical-alt' },
-      { id: 'prescriptions', name: 'Prescriptions', icon: 'fas fa-prescription-bottle' }
+      //{ id: 'prescriptions', name: 'Prescriptions', icon: 'fas fa-prescription-bottle' }
     ]
 
     const notifications = ref([
