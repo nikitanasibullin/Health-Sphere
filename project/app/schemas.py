@@ -163,7 +163,6 @@ class PatientMedicamentCreate(PatientMedicamentBase):
 class PatientMedicamentResponse(PatientMedicamentBase):
     id: int
     patient_id: int
-    
     class Config:
         from_attributes = True
 
@@ -176,20 +175,6 @@ class MedicamentsForAppointmentRequest(BaseModel):
             raise ValueError('Список лекарств не может быть пустым')
         return v
     
-class PatientMedicamentResponse(BaseModel):
-    id: int
-    patient_id: int
-    medicament_name: str
-    dosage: Optional[str] = None
-    frequency: Optional[str] = None
-    start_date: date
-    end_date: Optional[date] = None
-    doctor_id: int
-    appointment_id: int
-    notes: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
 
 class MedicamentConflictResponse(BaseModel):
     """Модель для конфликтного лекарства"""

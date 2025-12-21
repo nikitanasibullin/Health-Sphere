@@ -734,8 +734,7 @@ def get_patient_medicaments(
     medicaments = db.query(models.PatientMedicament)\
         .filter(models.PatientMedicament.patient_id == patient_id)\
         .order_by(
-            models.PatientMedicament.start_date.desc(),
-            models.PatientMedicament.medicament_name.asc()
+            models.PatientMedicament.start_date.desc()
         )\
         .all()
     
